@@ -1,72 +1,52 @@
-package com.crms.app.model;
+package com.crms.app.dto;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.crms.app.model.CarStatus;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
-@Entity
-@Table(name = "cars")
-public class Car {
+public class CarRequest {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
+    @NotBlank
     private String make;
 
-    @Column(nullable = false)
+    @NotBlank
     private String model;
 
-    @Column(nullable = false)
+    @NotNull
+    @Min(1900)
     private Integer modelYear;
 
-    @Column(nullable = false, unique = true)
+    @NotBlank
     private String licensePlate;
 
     private String vin;
 
-    @Column(nullable = false)
+    @NotNull
+    @Min(1)
     private Integer seats;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal dailyRate;
 
-    @Column(nullable = false)
+    @NotBlank
     private String transmission;
 
-    @Column(nullable = false)
+    @NotBlank
     private String fuelType;
 
-    @Column(nullable = false)
     private boolean gpsIncluded;
 
-    @Column(nullable = false)
     private boolean childSeat;
 
-    @Column(nullable = false)
-    private boolean airConditioning;
+    private boolean airConditioning = true;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private CarStatus status = CarStatus.AVAILABLE;
 
-    @Column(length = 500)
     private String description;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public String getMake() {
         return make;

@@ -1,63 +1,24 @@
-package com.crms.app.model;
+package com.crms.app.dto;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.crms.app.model.CarStatus;
 import java.math.BigDecimal;
 
-@Entity
-@Table(name = "cars")
-public class Car {
+public class CarResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
     private String make;
-
-    @Column(nullable = false)
     private String model;
-
-    @Column(nullable = false)
     private Integer modelYear;
-
-    @Column(nullable = false, unique = true)
     private String licensePlate;
-
     private String vin;
-
-    @Column(nullable = false)
     private Integer seats;
-
-    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal dailyRate;
-
-    @Column(nullable = false)
     private String transmission;
-
-    @Column(nullable = false)
     private String fuelType;
-
-    @Column(nullable = false)
     private boolean gpsIncluded;
-
-    @Column(nullable = false)
     private boolean childSeat;
-
-    @Column(nullable = false)
     private boolean airConditioning;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private CarStatus status = CarStatus.AVAILABLE;
-
-    @Column(length = 500)
+    private CarStatus status;
     private String description;
 
     public Long getId() {
