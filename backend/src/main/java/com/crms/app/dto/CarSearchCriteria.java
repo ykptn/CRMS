@@ -4,6 +4,7 @@ import com.crms.app.model.CarStatus;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class CarSearchCriteria {
 
@@ -30,6 +31,8 @@ public class CarSearchCriteria {
     private Boolean gpsIncluded;
     private Boolean childSeat;
     private CarStatus status;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     public String getMake() {
         return make;
@@ -125,5 +128,21 @@ public class CarSearchCriteria {
 
     public void setStatus(CarStatus status) {
         this.status = status;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 }

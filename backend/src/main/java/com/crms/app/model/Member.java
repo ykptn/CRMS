@@ -10,4 +10,12 @@ public class Member extends User {
 
     @Column(nullable = false)
     private String drivingLicenseNumber;
+
+    public String getDrivingLicenseNumber() {
+        return drivingLicenseNumber;
+    }
+
+    public void setDrivingLicenseNumber(String drivingLicenseNumber) {
+        this.drivingLicenseNumber = drivingLicenseNumber;
+    }
 }
