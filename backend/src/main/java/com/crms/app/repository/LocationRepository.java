@@ -1,4 +1,7 @@
 package com.crms.app.repository;
 
-public interface LocationRepository {
+import com.crms.app.model.Location;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface LocationRepository extends JpaRepository<Location, Long> {
 }

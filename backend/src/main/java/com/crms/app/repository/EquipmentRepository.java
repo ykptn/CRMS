@@ -1,4 +1,7 @@
 package com.crms.app.repository;
 
-public interface EquipmentRepository {
+import com.crms.app.model.Equipment;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 }
