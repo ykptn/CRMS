@@ -2,12 +2,16 @@ package com.crms.app.service.impl;
 
 import com.crms.app.dto.CarResponse;
 import com.crms.app.dto.CarSearchCriteria;
+import com.crms.app.exception.ReservationConflictException;
 import com.crms.app.mapper.CarMapper;
 import com.crms.app.model.Car;
+import com.crms.app.model.ReservationStatus;
 import com.crms.app.repository.CarRepository;
+import com.crms.app.repository.ReservationRepository;
 import com.crms.app.service.CarBrowsingService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,16 +25,29 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
 
     private final CarRepository carRepository;
     private final CarMapper carMapper;
+    private final ReservationRepository reservationRepository;
 
-    public CarBrowsingServiceImpl(CarRepository carRepository, CarMapper carMapper) {
+    public CarBrowsingServiceImpl(CarRepository carRepository,
+                                  CarMapper carMapper,
+                                  ReservationRepository reservationRepository) {
         this.carRepository = carRepository;
         this.carMapper = carMapper;
+        this.reservationRepository = reservationRepository;
     }
 
     @Override
     public List<CarResponse> searchCars(CarSearchCriteria criteria) {
         Specification<Car> specification = buildSpecification(criteria);
-        return carRepository.findAll(specification).stream()
+        List<Car> cars = carRepository.findAll(specification);
+        if (criteria == null || criteria.getStartDate() == null || criteria.getEndDate() == null) {
+            return cars.stream()
+                    .map(carMapper::toResponse)
+                    .toList();
+        }
+
+        validateDateRange(criteria.getStartDate(), criteria.getEndDate());
+        return cars.stream()
+                .filter(car -> isAvailable(car.getId(), criteria.getStartDate(), criteria.getEndDate()))
                 .map(carMapper::toResponse)
                 .toList();
     }
@@ -107,5 +124,19 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
 
             return builder.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private boolean isAvailable(Long carId, LocalDate startDate, LocalDate endDate) {
+        return !reservationRepository.existsOverlappingReservation(
+                carId,
+                ReservationStatus.ACTIVE,
+                startDate,
+                endDate);
+    }
+
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (endDate.isBefore(startDate)) {
+            throw new ReservationConflictException("End date must be on or after the start date.");
+        }
     }
 }
