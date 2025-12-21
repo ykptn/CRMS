@@ -20,9 +20,19 @@ public class CarRequest {
     private Integer modelYear;
 
     @NotBlank
+    private String barcode;
+
+    @NotBlank
     private String licensePlate;
 
     private String vin;
+
+    @NotBlank
+    private String carType;
+
+    @NotNull
+    @Min(0)
+    private Integer mileage;
 
     @NotNull
     @Min(1)
@@ -80,12 +90,36 @@ public class CarRequest {
         this.licensePlate = licensePlate;
     }
 
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
+
     public String getVin() {
         return vin;
     }
 
     public void setVin(String vin) {
         this.vin = vin;
+    }
+
+    public String getCarType() {
+        return carType;
+    }
+
+    public void setCarType(String carType) {
+        this.carType = carType;
+    }
+
+    public Integer getMileage() {
+        return mileage;
+    }
+
+    public void setMileage(Integer mileage) {
+        this.mileage = mileage;
     }
 
     public Integer getSeats() {

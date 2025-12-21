@@ -10,6 +10,7 @@ public class CarSearchCriteria {
 
     private String make;
     private String model;
+    private String carType;
 
     @Min(1900)
     private Integer minYear;
@@ -48,6 +49,14 @@ public class CarSearchCriteria {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public String getCarType() {
+        return carType;
+    }
+
+    public void setCarType(String carType) {
+        this.carType = carType;
     }
 
     public Integer getMinYear() {

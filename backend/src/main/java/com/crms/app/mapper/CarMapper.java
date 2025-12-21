@@ -19,8 +19,11 @@ public class CarMapper {
         car.setMake(request.getMake());
         car.setModel(request.getModel());
         car.setModelYear(request.getModelYear());
+        car.setBarcode(request.getBarcode());
         car.setLicensePlate(request.getLicensePlate());
         car.setVin(request.getVin());
+        car.setCarType(request.getCarType());
+        car.setMileage(request.getMileage());
         car.setSeats(request.getSeats());
         car.setDailyRate(request.getDailyRate());
         car.setTransmission(request.getTransmission());
@@ -43,8 +46,11 @@ public class CarMapper {
         response.setMake(car.getMake());
         response.setModel(car.getModel());
         response.setModelYear(car.getModelYear());
+        response.setBarcode(car.getBarcode());
         response.setLicensePlate(car.getLicensePlate());
         response.setVin(car.getVin());
+        response.setCarType(car.getCarType());
+        response.setMileage(car.getMileage());
         response.setSeats(car.getSeats());
         response.setDailyRate(car.getDailyRate());
         response.setTransmission(car.getTransmission());

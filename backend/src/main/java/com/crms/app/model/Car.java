@@ -28,9 +28,18 @@ public class Car {
     private Integer modelYear;
 
     @Column(nullable = false, unique = true)
+    private String barcode;
+
+    @Column(nullable = false, unique = true)
     private String licensePlate;
 
     private String vin;
+
+    @Column(nullable = false)
+    private String carType;
+
+    @Column(nullable = false)
+    private Integer mileage;
 
     @Column(nullable = false)
     private Integer seats;
@@ -100,12 +109,36 @@ public class Car {
         this.licensePlate = licensePlate;
     }
 
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
+
     public String getVin() {
         return vin;
     }
 
     public void setVin(String vin) {
         this.vin = vin;
+    }
+
+    public String getCarType() {
+        return carType;
+    }
+
+    public void setCarType(String carType) {
+        this.carType = carType;
+    }
+
+    public Integer getMileage() {
+        return mileage;
+    }
+
+    public void setMileage(Integer mileage) {
+        this.mileage = mileage;
     }
 
     public Integer getSeats() {

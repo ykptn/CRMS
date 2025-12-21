@@ -78,6 +78,12 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
                         "%" + criteria.getModel().toLowerCase() + "%"));
             }
 
+            if (StringUtils.hasText(criteria.getCarType())) {
+                predicates.add(builder.equal(
+                        builder.lower(root.get("carType")),
+                        criteria.getCarType().toLowerCase()));
+            }
+
             if (criteria.getMinYear() != null) {
                 predicates.add(builder.greaterThanOrEqualTo(root.get("modelYear"), criteria.getMinYear()));
             }

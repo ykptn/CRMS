@@ -9,8 +9,11 @@ public class CarResponse {
     private String make;
     private String model;
     private Integer modelYear;
+    private String barcode;
     private String licensePlate;
     private String vin;
+    private String carType;
+    private Integer mileage;
     private Integer seats;
     private BigDecimal dailyRate;
     private String transmission;
@@ -61,12 +64,36 @@ public class CarResponse {
         this.licensePlate = licensePlate;
     }
 
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
+
     public String getVin() {
         return vin;
     }
 
     public void setVin(String vin) {
         this.vin = vin;
+    }
+
+    public String getCarType() {
+        return carType;
+    }
+
+    public void setCarType(String carType) {
+        this.carType = carType;
+    }
+
+    public Integer getMileage() {
+        return mileage;
+    }
+
+    public void setMileage(Integer mileage) {
+        this.mileage = mileage;
     }
 
     public Integer getSeats() {
