@@ -23,9 +23,6 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# Tests / coverage
-coverage/
-
 # Backend build output
 target/
 *.iml
@@ -34,5 +31,3 @@ target/
 .m2/
 .m2-local/
 
-# Project docs
-docs/
