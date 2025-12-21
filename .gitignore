@@ -1,0 +1,38 @@
+# macOS artifacts
+.DS_Store
+
+# Editor settings
+.idea/
+.vscode/
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Tests / coverage
+coverage/
+
+# Backend build output
+target/
+*.iml
+
+# Local Maven repositories
+.m2/
+.m2-local/
+
+# Project docs
+docs/
