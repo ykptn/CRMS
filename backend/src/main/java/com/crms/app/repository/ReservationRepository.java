@@ -43,4 +43,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findAllByStatusOrderByStartDateDesc(ReservationStatus status);
 
     List<Reservation> findAllByOrderByStartDateDesc();
+
+    List<Reservation> findAllByMemberIdOrderByStartDateDesc(Long memberId);
 }
