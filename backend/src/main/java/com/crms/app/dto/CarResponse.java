@@ -9,6 +9,9 @@ public class CarResponse {
     private String make;
     private String model;
     private Integer modelYear;
+    private Long locationId;
+    private String locationCode;
+    private String locationName;
     private String barcode;
     private String licensePlate;
     private String vin;
@@ -54,6 +57,30 @@ public class CarResponse {
 
     public void setModelYear(Integer modelYear) {
         this.modelYear = modelYear;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
+    }
+
+    public String getLocationCode() {
+        return locationCode;
+    }
+
+    public void setLocationCode(String locationCode) {
+        this.locationCode = locationCode;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public String getLicensePlate() {

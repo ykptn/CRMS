@@ -7,4 +7,8 @@ import java.util.List;
 public interface ReportingService {
 
     List<ReservationSummary> listReservations(ReservationStatus status);
+
+    byte[] exportReservationsCsv(ReservationStatus status);
+
+    byte[] exportReservationsPdf(ReservationStatus status);
 }

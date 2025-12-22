@@ -11,6 +11,7 @@ public class CarSearchCriteria {
     private String make;
     private String model;
     private String carType;
+    private Long locationId;
 
     @Min(1900)
     private Integer minYear;
@@ -57,6 +58,14 @@ public class CarSearchCriteria {
 
     public void setCarType(String carType) {
         this.carType = carType;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 
     public Integer getMinYear() {

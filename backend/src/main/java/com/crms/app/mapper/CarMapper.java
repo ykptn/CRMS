@@ -4,6 +4,7 @@ import com.crms.app.dto.CarRequest;
 import com.crms.app.dto.CarResponse;
 import com.crms.app.model.Car;
 import com.crms.app.model.CarStatus;
+import com.crms.app.model.Location;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -46,6 +47,12 @@ public class CarMapper {
         response.setMake(car.getMake());
         response.setModel(car.getModel());
         response.setModelYear(car.getModelYear());
+        Location location = car.getLocation();
+        if (location != null) {
+            response.setLocationId(location.getId());
+            response.setLocationCode(location.getCode());
+            response.setLocationName(location.getName());
+        }
         response.setBarcode(car.getBarcode());
         response.setLicensePlate(car.getLicensePlate());
         response.setVin(car.getVin());

@@ -19,6 +19,9 @@ public class CarRequest {
     @Min(1900)
     private Integer modelYear;
 
+    @NotNull
+    private Long locationId;
+
     @NotBlank
     private String barcode;
 
@@ -80,6 +83,14 @@ public class CarRequest {
 
     public void setModelYear(Integer modelYear) {
         this.modelYear = modelYear;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 
     public String getLicensePlate() {
