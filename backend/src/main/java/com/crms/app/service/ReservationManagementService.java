@@ -1,11 +1,12 @@
 package com.crms.app.service;
 
+import com.crms.app.dto.ReservationQuoteResponse;
 import com.crms.app.dto.ReservationRequest;
 import com.crms.app.dto.ReservationSummary;
 
 public interface ReservationManagementService {
 
-    ReservationSummary quoteReservation(ReservationRequest request);
+    ReservationQuoteResponse quoteReservation(ReservationRequest request);
 
     ReservationSummary createReservation(ReservationRequest request);
 

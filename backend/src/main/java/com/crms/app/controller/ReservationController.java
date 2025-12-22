@@ -1,5 +1,6 @@
 package com.crms.app.controller;
 
+import com.crms.app.dto.ReservationQuoteResponse;
 import com.crms.app.dto.ReservationRequest;
 import com.crms.app.dto.ReservationSummary;
 import com.crms.app.service.ReservationManagementService;
@@ -30,9 +31,9 @@ public class ReservationController {
     }
 
     @PostMapping("/quote")
-    public ResponseEntity<ReservationSummary> quoteReservation(@Valid @RequestBody ReservationRequest request) {
-        ReservationSummary summary = reservationManagementService.quoteReservation(request);
-        return ResponseEntity.ok(summary);
+    public ResponseEntity<ReservationQuoteResponse> quoteReservation(@Valid @RequestBody ReservationRequest request) {
+        ReservationQuoteResponse response = reservationManagementService.quoteReservation(request);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{reservationId}")

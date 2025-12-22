@@ -1,5 +1,6 @@
 package com.crms.app.service.impl;
 
+import com.crms.app.dto.ReservationQuoteResponse;
 import com.crms.app.dto.ReservationRequest;
 import com.crms.app.dto.ReservationSummary;
 import com.crms.app.exception.CarUnavailableException;
@@ -65,7 +66,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
     }
 
     @Override
-    public ReservationSummary quoteReservation(ReservationRequest request) {
+    public ReservationQuoteResponse quoteReservation(ReservationRequest request) {
         validateDates(request.getStartDate(), request.getEndDate());
         Member member = findMember(request.getMemberId());
         ensureMemberHasLicense(member);
@@ -74,7 +75,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
 
         Reservation reservation = buildReservation(request, member, car);
         reservation.setTotalCost(calculateTotalCost(reservation));
-        return reservationMapper.toSummary(reservation);
+        return reservationMapper.toQuoteResponse(reservation);
     }
 
     @Override

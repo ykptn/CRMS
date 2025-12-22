@@ -1,6 +1,7 @@
 package com.crms.app.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public class NotificationPayload {
 
@@ -10,6 +11,8 @@ public class NotificationPayload {
     private String carSummary;
     private String pickupLocation;
     private String dropoffLocation;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private BigDecimal totalCost;
 
     public String getRecipientEmail() {
@@ -58,6 +61,22 @@ public class NotificationPayload {
 
     public void setDropoffLocation(String dropoffLocation) {
         this.dropoffLocation = dropoffLocation;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public BigDecimal getTotalCost() {

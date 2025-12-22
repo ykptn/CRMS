@@ -1,5 +1,6 @@
 package com.crms.app.mapper;
 
+import com.crms.app.dto.ReservationQuoteResponse;
 import com.crms.app.dto.ReservationSummary;
 import com.crms.app.model.Reservation;
 import org.springframework.stereotype.Component;
@@ -20,5 +21,23 @@ public class ReservationMapper {
         summary.setTotalCost(reservation.getTotalCost());
         summary.setStatus(reservation.getStatus());
         return summary;
+    }
+
+    public ReservationQuoteResponse toQuoteResponse(Reservation reservation) {
+        ReservationQuoteResponse response = new ReservationQuoteResponse();
+        response.setMemberId(reservation.getMember().getId());
+        response.setCarId(reservation.getCar().getId());
+        response.setPickupLocationId(reservation.getPickupLocation().getId());
+        response.setDropoffLocationId(reservation.getDropoffLocation().getId());
+        response.setStartDate(reservation.getStartDate());
+        response.setEndDate(reservation.getEndDate());
+        response.setAdditionalServiceIds(reservation.getAdditionalServices().stream()
+                .map(service -> service.getId())
+                .toList());
+        response.setEquipmentIds(reservation.getEquipments().stream()
+                .map(equipment -> equipment.getId())
+                .toList());
+        response.setTotalCost(reservation.getTotalCost());
+        return response;
     }
 }
