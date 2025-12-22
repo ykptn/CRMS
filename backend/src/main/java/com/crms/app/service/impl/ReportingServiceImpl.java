@@ -69,8 +69,8 @@ public class ReportingServiceImpl implements ReportingService {
     public byte[] exportReservationsPdf(ReservationStatus status) {
         List<ReservationSummary> reservations = listReservations(status);
         try (PDDocument document = new PDDocument();
-             ByteArrayOutputStream output = new ByteArrayOutputStream();
-             PdfWriter writer = new PdfWriter(document)) {
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            PdfWriter writer = new PdfWriter(document);
             String title = status == null
                     ? "Reservation Report (All)"
                     : "Reservation Report (" + status + ")";
@@ -80,6 +80,7 @@ public class ReportingServiceImpl implements ReportingService {
             for (ReservationSummary summary : reservations) {
                 writer.writeLine(formatReservationLine(summary), PDType1Font.HELVETICA, 10);
             }
+            writer.close();
             document.save(output);
             return output.toByteArray();
         } catch (IOException ex) {
