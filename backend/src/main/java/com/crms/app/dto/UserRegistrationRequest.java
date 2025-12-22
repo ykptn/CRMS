@@ -2,6 +2,7 @@ package com.crms.app.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class UserRegistrationRequest {
@@ -18,12 +19,14 @@ public class UserRegistrationRequest {
     private String password;
 
     @NotBlank
+    @Pattern(regexp = "^\\+?[0-9()\\-\\s]{7,20}$")
     private String phone;
 
     @NotBlank
     private String address;
 
     @NotBlank
+    @Pattern(regexp = "^[A-Za-z0-9]{5,20}$")
     private String drivingLicenseNumber;
 
     public String getFullName() {
