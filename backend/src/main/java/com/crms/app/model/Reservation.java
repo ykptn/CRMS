@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,7 +20,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "reservations")
+@Table(name = "reservations",
+        indexes = {
+                @Index(name = "idx_reservations_car_status_dates",
+                        columnList = "car_id,status,start_date,end_date"),
+                @Index(name = "idx_reservations_member", columnList = "member_id")
+        })
 public class Reservation {
 
     @Id

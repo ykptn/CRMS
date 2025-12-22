@@ -2,6 +2,7 @@ package com.crms.app.dto;
 
 import com.crms.app.model.CarStatus;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +36,13 @@ public class CarSearchCriteria {
     private CarStatus status;
     private LocalDate startDate;
     private LocalDate endDate;
+
+    @Min(0)
+    private Integer page;
+
+    @Min(1)
+    @Max(200)
+    private Integer size;
 
     public String getMake() {
         return make;
@@ -162,5 +170,21 @@ public class CarSearchCriteria {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public Integer getPage() {
+        return page;
+    }
+
+    public void setPage(Integer page) {
+        this.page = page;
+    }
+
+    public Integer getSize() {
+        return size;
+    }
+
+    public void setSize(Integer size) {
+        this.size = size;
     }
 }

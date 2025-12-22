@@ -15,6 +15,8 @@ import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,9 @@ import org.springframework.util.StringUtils;
 @Service
 @Transactional(readOnly = true)
 public class CarBrowsingServiceImpl implements CarBrowsingService {
+
+    private static final int DEFAULT_PAGE_SIZE = 50;
+    private static final int MAX_PAGE_SIZE = 200;
 
     private final CarRepository carRepository;
     private final CarMapper carMapper;
@@ -39,7 +44,7 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
     @Override
     public List<CarResponse> searchCars(CarSearchCriteria criteria) {
         Specification<Car> specification = buildSpecification(criteria);
-        List<Car> cars = carRepository.findAll(specification);
+        List<Car> cars = carRepository.findAll(specification, buildPageable(criteria)).getContent();
         if (criteria == null || criteria.getStartDate() == null || criteria.getEndDate() == null) {
             return cars.stream()
                     .map(carMapper::toResponse)
@@ -151,5 +156,19 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
         if (endDate.isBefore(startDate)) {
             throw new ReservationConflictException("End date must be on or after the start date.");
         }
+    }
+
+    private Pageable buildPageable(CarSearchCriteria criteria) {
+        int page = 0;
+        int size = DEFAULT_PAGE_SIZE;
+        if (criteria != null) {
+            if (criteria.getPage() != null) {
+                page = Math.max(0, criteria.getPage());
+            }
+            if (criteria.getSize() != null) {
+                size = Math.max(1, Math.min(MAX_PAGE_SIZE, criteria.getSize()));
+            }
+        }
+        return PageRequest.of(page, size);
     }
 }

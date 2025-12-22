@@ -10,11 +10,20 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "cars")
+@Table(name = "cars",
+        indexes = {
+                @Index(name = "idx_cars_status", columnList = "status"),
+                @Index(name = "idx_cars_location", columnList = "location_id"),
+                @Index(name = "idx_cars_make", columnList = "make"),
+                @Index(name = "idx_cars_model", columnList = "model"),
+                @Index(name = "idx_cars_car_type", columnList = "car_type"),
+                @Index(name = "idx_cars_daily_rate", columnList = "daily_rate")
+        })
 public class Car {
 
     @Id

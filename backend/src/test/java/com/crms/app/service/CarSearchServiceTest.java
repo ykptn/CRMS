@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
 
 @ExtendWith(MockitoExtension.class)
 class CarSearchServiceTest {
@@ -50,7 +51,8 @@ class CarSearchServiceTest {
         unavailable.setId(2L);
         unavailable.setMake("Honda");
 
-        when(carRepository.findAll(any())).thenReturn(List.of(available, unavailable));
+        when(carRepository.findAll(any(), any()))
+                .thenReturn(new PageImpl<>(List.of(available, unavailable)));
         when(reservationRepository.existsOverlappingReservation(
                 eq(1L),
                 eq(ReservationStatus.ACTIVE),
