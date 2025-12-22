@@ -48,4 +48,10 @@ public class ReservationController {
         ReservationSummary summary = reservationManagementService.cancelReservation(reservationId);
         return ResponseEntity.ok(summary);
     }
+
+    @PostMapping("/{reservationId}/complete")
+    public ResponseEntity<ReservationSummary> completeReservation(@PathVariable Long reservationId) {
+        ReservationSummary summary = reservationManagementService.completeReservation(reservationId);
+        return ResponseEntity.ok(summary);
+    }
 }

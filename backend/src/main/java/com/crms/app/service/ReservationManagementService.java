@@ -13,4 +13,6 @@ public interface ReservationManagementService {
     ReservationSummary updateReservation(Long reservationId, ReservationRequest request);
 
     ReservationSummary cancelReservation(Long reservationId);
+
+    ReservationSummary completeReservation(Long reservationId);
 }

@@ -5,6 +5,7 @@ import com.crms.app.dto.CarSearchCriteria;
 import com.crms.app.exception.ReservationConflictException;
 import com.crms.app.mapper.CarMapper;
 import com.crms.app.model.Car;
+import com.crms.app.model.CarStatus;
 import com.crms.app.model.ReservationStatus;
 import com.crms.app.repository.CarRepository;
 import com.crms.app.repository.ReservationRepository;
@@ -62,7 +63,7 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
     private Specification<Car> buildSpecification(CarSearchCriteria criteria) {
         return (root, query, builder) -> {
             if (criteria == null) {
-                return builder.conjunction();
+                return builder.notEqual(root.get("status"), CarStatus.UNAVAILABLE);
             }
             List<Predicate> predicates = new ArrayList<>();
 
@@ -126,6 +127,8 @@ public class CarBrowsingServiceImpl implements CarBrowsingService {
 
             if (criteria.getStatus() != null) {
                 predicates.add(builder.equal(root.get("status"), criteria.getStatus()));
+            } else {
+                predicates.add(builder.notEqual(root.get("status"), CarStatus.UNAVAILABLE));
             }
 
             return builder.and(predicates.toArray(new Predicate[0]));

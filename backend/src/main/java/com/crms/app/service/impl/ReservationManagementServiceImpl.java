@@ -9,6 +9,7 @@ import com.crms.app.exception.ReservationConflictException;
 import com.crms.app.mapper.ReservationMapper;
 import com.crms.app.model.AdditionalService;
 import com.crms.app.model.Car;
+import com.crms.app.model.CarStatus;
 import com.crms.app.model.Equipment;
 import com.crms.app.model.Location;
 import com.crms.app.model.Member;
@@ -71,7 +72,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         Member member = findMember(request.getMemberId());
         ensureMemberHasLicense(member);
         Car car = findCar(request.getCarId());
-        ensureCarAvailable(car.getId(), request.getStartDate(), request.getEndDate());
+        ensureCarAvailable(car, request.getStartDate(), request.getEndDate());
 
         Reservation reservation = buildReservation(request, member, car);
         reservation.setTotalCost(calculateTotalCost(reservation));
@@ -84,7 +85,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         Member member = findMember(request.getMemberId());
         ensureMemberHasLicense(member);
         Car car = findCar(request.getCarId());
-        ensureCarAvailable(car.getId(), request.getStartDate(), request.getEndDate());
+        ensureCarAvailable(car, request.getStartDate(), request.getEndDate());
 
         Reservation reservation = buildReservation(request, member, car);
         reservation.setReservationNumber(UUID.randomUUID().toString());
@@ -139,6 +140,15 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         return reservationMapper.toSummary(saved);
     }
 
+    @Override
+    public ReservationSummary completeReservation(Long reservationId) {
+        Reservation reservation = findReservation(reservationId);
+        ensureCompletable(reservation);
+        reservation.setStatus(ReservationStatus.COMPLETED);
+        Reservation saved = reservationRepository.save(reservation);
+        return reservationMapper.toSummary(saved);
+    }
+
     private void validateDates(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new ReservationConflictException("Start date and end date are required.");
@@ -158,9 +168,21 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         }
     }
 
-    private void ensureCarAvailable(Long carId, LocalDate startDate, LocalDate endDate) {
+    private void ensureCompletable(Reservation reservation) {
+        if (reservation.getStatus() == ReservationStatus.CANCELED) {
+            throw new ReservationConflictException("Reservation is already canceled.");
+        }
+        if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+            throw new ReservationConflictException("Reservation is already completed.");
+        }
+    }
+
+    private void ensureCarAvailable(Car car, LocalDate startDate, LocalDate endDate) {
+        if (car.getStatus() == CarStatus.UNAVAILABLE) {
+            throw new CarUnavailableException("Car is not available for the selected dates.");
+        }
         boolean conflict = reservationRepository.existsOverlappingReservation(
-                carId,
+                car.getId(),
                 ReservationStatus.ACTIVE,
                 startDate,
                 endDate);
