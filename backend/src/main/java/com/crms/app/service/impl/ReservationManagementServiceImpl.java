@@ -20,6 +20,7 @@ import com.crms.app.repository.MemberRepository;
 import com.crms.app.repository.ReservationRepository;
 import com.crms.app.repository.ServiceRepository;
 import com.crms.app.service.ReservationManagementService;
+import com.crms.app.service.NotificationService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -43,6 +44,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
     private final ServiceRepository serviceRepository;
     private final EquipmentRepository equipmentRepository;
     private final ReservationMapper reservationMapper;
+    private final NotificationService notificationService;
 
     public ReservationManagementServiceImpl(ReservationRepository reservationRepository,
                                             CarRepository carRepository,
@@ -50,7 +52,8 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
                                             LocationRepository locationRepository,
                                             ServiceRepository serviceRepository,
                                             EquipmentRepository equipmentRepository,
-                                            ReservationMapper reservationMapper) {
+                                            ReservationMapper reservationMapper,
+                                            NotificationService notificationService) {
         this.reservationRepository = reservationRepository;
         this.carRepository = carRepository;
         this.memberRepository = memberRepository;
@@ -58,6 +61,20 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         this.serviceRepository = serviceRepository;
         this.equipmentRepository = equipmentRepository;
         this.reservationMapper = reservationMapper;
+        this.notificationService = notificationService;
+    }
+
+    @Override
+    public ReservationSummary quoteReservation(ReservationRequest request) {
+        validateDates(request.getStartDate(), request.getEndDate());
+        Member member = findMember(request.getMemberId());
+        ensureMemberHasLicense(member);
+        Car car = findCar(request.getCarId());
+        ensureCarAvailable(car.getId(), request.getStartDate(), request.getEndDate());
+
+        Reservation reservation = buildReservation(request, member, car);
+        reservation.setTotalCost(calculateTotalCost(reservation));
+        return reservationMapper.toSummary(reservation);
     }
 
     @Override
@@ -68,19 +85,12 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         Car car = findCar(request.getCarId());
         ensureCarAvailable(car.getId(), request.getStartDate(), request.getEndDate());
 
-        Reservation reservation = new Reservation();
+        Reservation reservation = buildReservation(request, member, car);
         reservation.setReservationNumber(UUID.randomUUID().toString());
-        reservation.setMember(member);
-        reservation.setCar(car);
-        reservation.setPickupLocation(findLocation(request.getPickupLocationId()));
-        reservation.setDropoffLocation(findLocation(request.getDropoffLocationId()));
-        reservation.setStartDate(request.getStartDate());
-        reservation.setEndDate(request.getEndDate());
-        reservation.setAdditionalServices(resolveServices(request.getAdditionalServiceIds()));
-        reservation.setEquipments(resolveEquipment(request.getEquipmentIds()));
         reservation.setTotalCost(calculateTotalCost(reservation));
 
         Reservation saved = reservationRepository.save(reservation);
+        notificationService.sendReservationNotification(saved, "CREATED");
         return reservationMapper.toSummary(saved);
     }
 
@@ -114,6 +124,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         reservation.setTotalCost(calculateTotalCost(reservation));
 
         Reservation saved = reservationRepository.save(reservation);
+        notificationService.sendReservationNotification(saved, "UPDATED");
         return reservationMapper.toSummary(saved);
     }
 
@@ -123,6 +134,7 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
         ensureModifiable(reservation);
         reservation.setStatus(ReservationStatus.CANCELED);
         Reservation saved = reservationRepository.save(reservation);
+        notificationService.sendReservationNotification(saved, "CANCELED");
         return reservationMapper.toSummary(saved);
     }
 
@@ -194,6 +206,19 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
     private Reservation findReservation(Long reservationId) {
         return reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + reservationId));
+    }
+
+    private Reservation buildReservation(ReservationRequest request, Member member, Car car) {
+        Reservation reservation = new Reservation();
+        reservation.setMember(member);
+        reservation.setCar(car);
+        reservation.setPickupLocation(findLocation(request.getPickupLocationId()));
+        reservation.setDropoffLocation(findLocation(request.getDropoffLocationId()));
+        reservation.setStartDate(request.getStartDate());
+        reservation.setEndDate(request.getEndDate());
+        reservation.setAdditionalServices(resolveServices(request.getAdditionalServiceIds()));
+        reservation.setEquipments(resolveEquipment(request.getEquipmentIds()));
+        return reservation;
     }
 
     private BigDecimal calculateTotalCost(Reservation reservation) {

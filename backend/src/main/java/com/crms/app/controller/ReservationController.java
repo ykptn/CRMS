@@ -29,6 +29,12 @@ public class ReservationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(summary);
     }
 
+    @PostMapping("/quote")
+    public ResponseEntity<ReservationSummary> quoteReservation(@Valid @RequestBody ReservationRequest request) {
+        ReservationSummary summary = reservationManagementService.quoteReservation(request);
+        return ResponseEntity.ok(summary);
+    }
+
     @PutMapping("/{reservationId}")
     public ResponseEntity<ReservationSummary> updateReservation(@PathVariable Long reservationId,
                                                                 @Valid @RequestBody ReservationRequest request) {
