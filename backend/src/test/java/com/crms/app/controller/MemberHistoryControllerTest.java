@@ -1,41 +1,60 @@
 package com.crms.app.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.crms.app.dto.ReservationSummary;
-import com.crms.app.service.MemberManagementService;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
+import com.crms.app.dto.ReservationRequest;
+import com.crms.app.model.Location;
+import com.crms.app.model.Member;
+import com.crms.app.support.IntegrationTestSupport;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-@ExtendWith(MockitoExtension.class)
-class MemberHistoryControllerTest {
+@AutoConfigureMockMvc
+class MemberHistoryControllerTest extends IntegrationTestSupport {
 
-    @Mock
-    private MemberManagementService memberManagementService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    private MemberController memberController;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void setup() {
-        memberController = new MemberController(memberManagementService);
-    }
+    @Autowired
+    private com.crms.app.service.ReservationManagementService reservationManagementService;
 
     @Test
-    void shouldReturnMemberReservationHistory() {
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(1L);
+    void shouldReturnMemberReservationHistory() throws Exception {
+        createAdmin("admin@crms.local", "AdminPass123");
 
-        when(memberManagementService.listMemberReservations(100L)).thenReturn(List.of(summary));
+        Location location = createLocation("LOC1");
+        Member member = createMember("member@crms.local", "Password123");
+        var car = createCar(location, "BC-200", "34ABC02");
 
-        var response = memberController.listMemberReservations(100L);
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(3));
+        request.setEndDate(LocalDate.now().plusDays(5));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).containsExactly(summary);
+        reservationManagementService.createReservation(request);
+
+        var response = mockMvc.perform(get("/api/admin/members/{id}/reservations", member.getId())
+                        .with(httpBasic("admin@crms.local", "AdminPass123"))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode body = objectMapper.readTree(response.getResponse().getContentAsString());
+        org.assertj.core.api.Assertions.assertThat(body.isArray()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(body.size()).isEqualTo(1);
     }
 }

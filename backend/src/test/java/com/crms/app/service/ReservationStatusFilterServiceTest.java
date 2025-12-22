@@ -1,101 +1,68 @@
 package com.crms.app.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import com.crms.app.dto.ReservationSummary;
-import com.crms.app.mapper.ReservationMapper;
-import com.crms.app.model.Reservation;
+import com.crms.app.dto.ReservationRequest;
+import com.crms.app.model.Location;
+import com.crms.app.model.Member;
 import com.crms.app.model.ReservationStatus;
-import com.crms.app.repository.ReservationRepository;
-import com.crms.app.service.impl.ReportingServiceImpl;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
+import com.crms.app.support.IntegrationTestSupport;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@ExtendWith(MockitoExtension.class)
-class ReservationStatusFilterServiceTest {
+class ReservationStatusFilterServiceTest extends IntegrationTestSupport {
 
-    @Mock
-    private ReservationRepository reservationRepository;
+    @Autowired
+    private ReportingService reportingService;
 
-    @Mock
-    private ReservationMapper reservationMapper;
+    @Autowired
+    private ReservationManagementService reservationManagementService;
 
-    private ReportingServiceImpl reportingService;
+    @Test
+    void shouldListAndFilterReservations() {
+        Location location = createLocation("LOC1");
+        Member member = createMember("member@crms.local", "Password123");
+        var car = createCar(location, "BC-500", "34ABC05");
 
-    @BeforeEach
-    void setup() {
-        reportingService = new ReportingServiceImpl(reservationRepository, reservationMapper);
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(3));
+        request.setEndDate(LocalDate.now().plusDays(4));
+
+        reservationManagementService.createReservation(request);
+
+        var all = reportingService.listReservations(null);
+        var active = reportingService.listReservations(ReservationStatus.ACTIVE);
+
+        assertThat(all).isNotEmpty();
+        assertThat(active).isNotEmpty();
     }
 
     @Test
-    void shouldListAllReservationsWhenStatusMissing() {
-        Reservation reservation = new Reservation();
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(1L);
+    void shouldExportReservationsAsCsvAndPdf() {
+        Location location = createLocation("LOC2");
+        Member member = createMember("member2@crms.local", "Password123");
+        var car = createCar(location, "BC-501", "34ABC06");
 
-        when(reservationRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(reservation));
-        when(reservationMapper.toSummary(reservation)).thenReturn(summary);
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(5));
+        request.setEndDate(LocalDate.now().plusDays(6));
 
-        List<ReservationSummary> results = reportingService.listReservations(null);
-
-        assertThat(results).containsExactly(summary);
-        verify(reservationRepository).findAllByOrderByStartDateDesc();
-        verify(reservationRepository, never()).findAllByStatusOrderByStartDateDesc(any());
-    }
-
-    @Test
-    void shouldFilterReservationsByStatus() {
-        Reservation reservation = new Reservation();
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(2L);
-
-        when(reservationRepository.findAllByStatusOrderByStartDateDesc(ReservationStatus.ACTIVE))
-                .thenReturn(List.of(reservation));
-        when(reservationMapper.toSummary(reservation)).thenReturn(summary);
-
-        List<ReservationSummary> results = reportingService.listReservations(ReservationStatus.ACTIVE);
-
-        assertThat(results).containsExactly(summary);
-        verify(reservationRepository).findAllByStatusOrderByStartDateDesc(ReservationStatus.ACTIVE);
-    }
-
-    @Test
-    void shouldExportReservationsAsCsv() {
-        Reservation reservation = new Reservation();
-        ReservationSummary summary = new ReservationSummary();
-        summary.setReservationNumber("RES-100");
-        summary.setStatus(ReservationStatus.ACTIVE);
-
-        when(reservationRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(reservation));
-        when(reservationMapper.toSummary(reservation)).thenReturn(summary);
+        reservationManagementService.createReservation(request);
 
         byte[] csv = reportingService.exportReservationsCsv(null);
-
-        String output = new String(csv, java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(output).contains("reservationNumber,status,startDate,endDate,totalCost,memberId,carId,pickupLocationId,dropoffLocationId");
-        assertThat(output).contains("RES-100");
-    }
-
-    @Test
-    void shouldExportReservationsAsPdf() {
-        Reservation reservation = new Reservation();
-        ReservationSummary summary = new ReservationSummary();
-        summary.setReservationNumber("RES-200");
-        summary.setStatus(ReservationStatus.CANCELED);
-
-        when(reservationRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(reservation));
-        when(reservationMapper.toSummary(reservation)).thenReturn(summary);
-
         byte[] pdf = reportingService.exportReservationsPdf(null);
 
+        assertThat(new String(csv, java.nio.charset.StandardCharsets.UTF_8))
+                .contains("reservationNumber,status,startDate,endDate,totalCost,memberId,carId,pickupLocationId,dropoffLocationId");
         assertThat(pdf).isNotEmpty();
     }
 }

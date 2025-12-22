@@ -1,98 +1,93 @@
 package com.crms.app.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.crms.app.dto.ReservationRequest;
-import com.crms.app.dto.ReservationSummary;
-import com.crms.app.service.ReservationManagementService;
-import org.junit.jupiter.api.BeforeEach;
+import com.crms.app.model.Location;
+import com.crms.app.model.Member;
+import com.crms.app.support.IntegrationTestSupport;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-@ExtendWith(MockitoExtension.class)
-class ReservationModificationControllerTest {
+@AutoConfigureMockMvc
+class ReservationModificationControllerTest extends IntegrationTestSupport {
 
-    @Mock
-    private ReservationManagementService reservationManagementService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    private ReservationController reservationController;
-
-    @BeforeEach
-    void setup() {
-        reservationController = new ReservationController(reservationManagementService);
-    }
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
-    void shouldUpdateReservation() {
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(10L);
+    void shouldCreateQuoteUpdateCancelAndCompleteReservation() throws Exception {
+        Location location = createLocation("LOC1");
+        Member member = createMember("member@crms.local", "Password123");
+        var car = createCar(location, "BC-300", "34ABC03");
 
-        when(reservationManagementService.updateReservation(eq(10L), any(ReservationRequest.class)))
-                .thenReturn(summary);
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(5));
+        request.setEndDate(LocalDate.now().plusDays(7));
 
-        var response = reservationController.updateReservation(10L, new ReservationRequest());
+        mockMvc.perform(post("/api/reservations/quote")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isSameAs(summary);
-    }
+        var createResponse = mockMvc.perform(post("/api/reservations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn();
 
-    @Test
-    void shouldCancelReservation() {
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(20L);
+        JsonNode created = objectMapper.readTree(createResponse.getResponse().getContentAsString());
+        long reservationId = created.get("id").asLong();
 
-        when(reservationManagementService.cancelReservation(20L)).thenReturn(summary);
+        ReservationRequest updateRequest = new ReservationRequest();
+        updateRequest.setMemberId(member.getId());
+        updateRequest.setCarId(car.getId());
+        updateRequest.setPickupLocationId(location.getId());
+        updateRequest.setDropoffLocationId(location.getId());
+        updateRequest.setStartDate(LocalDate.now().plusDays(6));
+        updateRequest.setEndDate(LocalDate.now().plusDays(8));
 
-        var response = reservationController.cancelReservation(20L);
+        mockMvc.perform(put("/api/reservations/{id}", reservationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk());
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isSameAs(summary);
-    }
+        mockMvc.perform(post("/api/reservations/{id}/cancel", reservationId))
+                .andExpect(status().isOk());
 
-    @Test
-    void shouldCreateReservation() {
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(30L);
+        ReservationRequest completeRequest = new ReservationRequest();
+        completeRequest.setMemberId(member.getId());
+        completeRequest.setCarId(car.getId());
+        completeRequest.setPickupLocationId(location.getId());
+        completeRequest.setDropoffLocationId(location.getId());
+        completeRequest.setStartDate(LocalDate.now().minusDays(4));
+        completeRequest.setEndDate(LocalDate.now().minusDays(2));
 
-        when(reservationManagementService.createReservation(any(ReservationRequest.class)))
-                .thenReturn(summary);
+        var completeCreate = mockMvc.perform(post("/api/reservations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRequest)))
+                .andExpect(status().isCreated())
+                .andReturn();
 
-        var response = reservationController.createReservation(new ReservationRequest());
+        JsonNode completeBody = objectMapper.readTree(completeCreate.getResponse().getContentAsString());
+        long completeId = completeBody.get("id").asLong();
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isSameAs(summary);
-    }
-
-    @Test
-    void shouldQuoteReservation() {
-        var quote = new com.crms.app.dto.ReservationQuoteResponse();
-        quote.setTotalCost(java.math.BigDecimal.valueOf(150));
-
-        when(reservationManagementService.quoteReservation(any(ReservationRequest.class)))
-                .thenReturn(quote);
-
-        var response = reservationController.quoteReservation(new ReservationRequest());
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isSameAs(quote);
-    }
-
-    @Test
-    void shouldCompleteReservation() {
-        ReservationSummary summary = new ReservationSummary();
-        summary.setId(40L);
-
-        when(reservationManagementService.completeReservation(40L)).thenReturn(summary);
-
-        var response = reservationController.completeReservation(40L);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isSameAs(summary);
+        mockMvc.perform(post("/api/reservations/{id}/complete", completeId))
+                .andExpect(status().isOk());
     }
 }

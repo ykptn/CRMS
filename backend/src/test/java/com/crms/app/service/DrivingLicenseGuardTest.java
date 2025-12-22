@@ -1,81 +1,36 @@
 package com.crms.app.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
 import com.crms.app.dto.ReservationRequest;
 import com.crms.app.exception.ReservationConflictException;
-import com.crms.app.mapper.ReservationMapper;
+import com.crms.app.model.Location;
 import com.crms.app.model.Member;
-import com.crms.app.repository.CarRepository;
-import com.crms.app.repository.EquipmentRepository;
-import com.crms.app.repository.LocationRepository;
-import com.crms.app.repository.MemberRepository;
-import com.crms.app.repository.ReservationRepository;
-import com.crms.app.repository.ServiceRepository;
-import com.crms.app.service.impl.ReservationManagementServiceImpl;
+import com.crms.app.support.IntegrationTestSupport;
 import java.time.LocalDate;
-import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@ExtendWith(MockitoExtension.class)
-class DrivingLicenseGuardTest {
+class DrivingLicenseGuardTest extends IntegrationTestSupport {
 
-    @Mock
-    private ReservationRepository reservationRepository;
-
-    @Mock
-    private CarRepository carRepository;
-
-    @Mock
-    private MemberRepository memberRepository;
-
-    @Mock
-    private LocationRepository locationRepository;
-
-    @Mock
-    private ServiceRepository serviceRepository;
-
-    @Mock
-    private EquipmentRepository equipmentRepository;
-
-    @Mock
-    private NotificationService notificationService;
-
-    private ReservationManagementServiceImpl reservationManagementService;
-
-    @BeforeEach
-    void setup() {
-        reservationManagementService = new ReservationManagementServiceImpl(
-                reservationRepository,
-                carRepository,
-                memberRepository,
-                locationRepository,
-                serviceRepository,
-                equipmentRepository,
-                new ReservationMapper(),
-                notificationService);
-    }
+    @Autowired
+    private ReservationManagementService reservationManagementService;
 
     @Test
     void shouldBlockReservationWhenLicenseMissing() {
-        ReservationRequest request = new ReservationRequest();
-        request.setMemberId(1L);
-        request.setCarId(2L);
-        request.setPickupLocationId(3L);
-        request.setDropoffLocationId(4L);
-        request.setStartDate(LocalDate.of(2025, 1, 10));
-        request.setEndDate(LocalDate.of(2025, 1, 12));
-
-        Member member = new Member();
-        member.setId(1L);
+        Location location = createLocation("LOC1");
+        Member member = createMember("member@crms.local", "Password123");
         member.setDrivingLicenseNumber("");
+        memberRepository.save(member);
+        var car = createCar(location, "BC-800", "34ABC13");
 
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(2));
+        request.setEndDate(LocalDate.now().plusDays(4));
 
         assertThatThrownBy(() -> reservationManagementService.createReservation(request))
                 .isInstanceOf(ReservationConflictException.class)

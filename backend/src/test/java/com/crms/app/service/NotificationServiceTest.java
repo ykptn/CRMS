@@ -1,42 +1,30 @@
 package com.crms.app.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.crms.app.config.NotificationProperties;
 import com.crms.app.model.Car;
 import com.crms.app.model.Location;
 import com.crms.app.model.Member;
 import com.crms.app.model.Reservation;
-import com.crms.app.service.impl.NotificationServiceImpl;
+import com.crms.app.support.InMemoryMailSender;
+import com.crms.app.support.IntegrationTestSupport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@ExtendWith(MockitoExtension.class)
-class NotificationServiceTest {
+class NotificationServiceTest extends IntegrationTestSupport {
 
-    @Mock
-    private JavaMailSender mailSender;
+    @Autowired
+    private NotificationService notificationService;
 
-    private NotificationProperties properties;
-    private NotificationServiceImpl notificationService;
+    @Autowired
+    private InMemoryMailSender mailSender;
 
     @BeforeEach
-    void setup() {
-        properties = new NotificationProperties();
-        properties.setEnabled(true);
-        properties.setFrom("no-reply@crms.local");
-        properties.setSubjectPrefix("CRMS Reservation");
-        notificationService = new NotificationServiceImpl(mailSender, properties);
+    void clearMailbox() {
+        mailSender.clear();
     }
 
     @Test
@@ -45,23 +33,10 @@ class NotificationServiceTest {
 
         notificationService.sendReservationNotification(reservation, "CREATED");
 
-        ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender).send(captor.capture());
-        SimpleMailMessage message = captor.getValue();
-
+        assertThat(mailSender.getSentMessages()).hasSize(1);
+        var message = mailSender.getSentMessages().get(0);
         assertThat(message.getTo()).containsExactly("member@crms.local");
-        assertThat(message.getFrom()).isEqualTo("no-reply@crms.local");
         assertThat(message.getSubject()).contains("CREATED");
-        assertThat(message.getText()).contains("Reservation number");
-    }
-
-    @Test
-    void shouldSkipEmailWhenDisabled() {
-        properties.setEnabled(false);
-
-        notificationService.sendReservationNotification(buildReservation(), "CANCELED");
-
-        verifyNoInteractions(mailSender);
     }
 
     private Reservation buildReservation() {

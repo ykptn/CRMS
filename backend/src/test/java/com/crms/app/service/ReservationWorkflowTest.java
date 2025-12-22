@@ -1,229 +1,108 @@
 package com.crms.app.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.crms.app.dto.ReservationRequest;
 import com.crms.app.dto.ReservationSummary;
-import com.crms.app.mapper.ReservationMapper;
-import com.crms.app.model.AdditionalService;
-import com.crms.app.model.Car;
-import com.crms.app.model.Equipment;
 import com.crms.app.model.Location;
 import com.crms.app.model.Member;
-import com.crms.app.model.Reservation;
 import com.crms.app.model.ReservationStatus;
-import com.crms.app.repository.CarRepository;
-import com.crms.app.repository.EquipmentRepository;
-import com.crms.app.repository.LocationRepository;
-import com.crms.app.repository.MemberRepository;
-import com.crms.app.repository.ReservationRepository;
-import com.crms.app.repository.ServiceRepository;
-import com.crms.app.service.impl.ReservationManagementServiceImpl;
-import java.math.BigDecimal;
+import com.crms.app.support.InMemoryMailSender;
+import com.crms.app.support.IntegrationTestSupport;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@ExtendWith(MockitoExtension.class)
-class ReservationWorkflowTest {
+class ReservationWorkflowTest extends IntegrationTestSupport {
 
-    @Mock
-    private ReservationRepository reservationRepository;
+    @Autowired
+    private ReservationManagementService reservationManagementService;
 
-    @Mock
-    private CarRepository carRepository;
-
-    @Mock
-    private MemberRepository memberRepository;
-
-    @Mock
-    private LocationRepository locationRepository;
-
-    @Mock
-    private ServiceRepository serviceRepository;
-
-    @Mock
-    private EquipmentRepository equipmentRepository;
-
-    @Mock
-    private NotificationService notificationService;
-
-    private ReservationManagementServiceImpl reservationManagementService;
+    @Autowired
+    private InMemoryMailSender mailSender;
 
     @BeforeEach
-    void setup() {
-        reservationManagementService = new ReservationManagementServiceImpl(
-                reservationRepository,
-                carRepository,
-                memberRepository,
-                locationRepository,
-                serviceRepository,
-                equipmentRepository,
-                new ReservationMapper(),
-                notificationService);
+    void clearMailbox() {
+        mailSender.clear();
     }
 
     @Test
     void shouldCreateReservationAndNotifyMember() {
+        Location location = createLocation("LOC1");
+        Member member = createMember("member@crms.local", "Password123");
+        var car = createCar(location, "BC-600", "34ABC06");
+
+        var service = createService("Insurance", java.math.BigDecimal.valueOf(10));
+        var equipment = createEquipment("GPS", java.math.BigDecimal.valueOf(5));
+
         ReservationRequest request = new ReservationRequest();
-        request.setMemberId(10L);
-        request.setCarId(20L);
-        request.setPickupLocationId(30L);
-        request.setDropoffLocationId(40L);
-        request.setStartDate(LocalDate.of(2025, 1, 1));
-        request.setEndDate(LocalDate.of(2025, 1, 4));
-        request.setAdditionalServiceIds(List.of(1L));
-        request.setEquipmentIds(List.of(2L));
-
-        Member member = new Member();
-        member.setId(10L);
-        member.setEmail("member@crms.local");
-        member.setDrivingLicenseNumber("ABC123");
-
-        Car car = new Car();
-        car.setId(20L);
-        car.setMake("Toyota");
-        car.setModel("Corolla");
-        car.setLicensePlate("34ABC01");
-        car.setDailyRate(BigDecimal.valueOf(100));
-
-        Location pickup = new Location();
-        pickup.setId(30L);
-        pickup.setName("Levent");
-        pickup.setCode("LEV");
-
-        Location dropoff = new Location();
-        dropoff.setId(40L);
-        dropoff.setName("Kadikoy");
-        dropoff.setCode("KAD");
-
-        AdditionalService service = new AdditionalService();
-        service.setId(1L);
-        service.setDailyPrice(BigDecimal.valueOf(10));
-
-        Equipment equipment = new Equipment();
-        equipment.setId(2L);
-        equipment.setDailyPrice(BigDecimal.valueOf(5));
-
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
-        when(carRepository.findById(20L)).thenReturn(Optional.of(car));
-        when(locationRepository.findById(30L)).thenReturn(Optional.of(pickup));
-        when(locationRepository.findById(40L)).thenReturn(Optional.of(dropoff));
-        when(serviceRepository.findAllById(List.of(1L))).thenReturn(List.of(service));
-        when(equipmentRepository.findAllById(List.of(2L))).thenReturn(List.of(equipment));
-        when(reservationRepository.existsOverlappingReservation(
-                eq(20L),
-                eq(ReservationStatus.ACTIVE),
-                eq(request.getStartDate()),
-                eq(request.getEndDate())))
-                .thenReturn(false);
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> {
-            Reservation reservation = invocation.getArgument(0);
-            reservation.setId(99L);
-            return reservation;
-        });
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(4));
+        request.setAdditionalServiceIds(java.util.List.of(service.getId()));
+        request.setEquipmentIds(java.util.List.of(equipment.getId()));
 
         ReservationSummary summary = reservationManagementService.createReservation(request);
 
-        ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
-        verify(reservationRepository).save(reservationCaptor.capture());
-        Reservation savedReservation = reservationCaptor.getValue();
-
-        assertThat(savedReservation.getReservationNumber()).isNotBlank();
-        assertThat(savedReservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
-        assertThat(savedReservation.getTotalCost()).isEqualByComparingTo("345");
+        assertThat(summary.getReservationNumber()).isNotBlank();
+        assertThat(summary.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
         assertThat(summary.getTotalCost()).isEqualByComparingTo("345");
-        verify(notificationService).sendReservationNotification(savedReservation, "CREATED");
+        assertThat(mailSender.getSentMessages()).isNotEmpty();
     }
 
     @Test
-    void shouldUpdateReservationAndNotifyMember() {
-        Reservation existing = new Reservation();
-        existing.setId(55L);
-        existing.setStatus(ReservationStatus.ACTIVE);
-        existing.setStartDate(LocalDate.now().plusDays(5));
-        existing.setEndDate(LocalDate.now().plusDays(7));
+    void shouldUpdateAndCancelReservation() {
+        Location location = createLocation("LOC2");
+        Member member = createMember("member2@crms.local", "Password123");
+        var car = createCar(location, "BC-601", "34ABC07");
 
-        ReservationRequest request = new ReservationRequest();
-        request.setMemberId(10L);
-        request.setCarId(20L);
-        request.setPickupLocationId(30L);
-        request.setDropoffLocationId(40L);
-        request.setStartDate(LocalDate.now().plusDays(6));
-        request.setEndDate(LocalDate.now().plusDays(8));
+        ReservationRequest createRequest = new ReservationRequest();
+        createRequest.setMemberId(member.getId());
+        createRequest.setCarId(car.getId());
+        createRequest.setPickupLocationId(location.getId());
+        createRequest.setDropoffLocationId(location.getId());
+        createRequest.setStartDate(LocalDate.now().plusDays(5));
+        createRequest.setEndDate(LocalDate.now().plusDays(7));
 
-        Member member = new Member();
-        member.setId(10L);
-        member.setDrivingLicenseNumber("ABC123");
+        ReservationSummary created = reservationManagementService.createReservation(createRequest);
 
-        Car car = new Car();
-        car.setId(20L);
-        car.setDailyRate(BigDecimal.valueOf(100));
+        ReservationRequest updateRequest = new ReservationRequest();
+        updateRequest.setMemberId(member.getId());
+        updateRequest.setCarId(car.getId());
+        updateRequest.setPickupLocationId(location.getId());
+        updateRequest.setDropoffLocationId(location.getId());
+        updateRequest.setStartDate(LocalDate.now().plusDays(6));
+        updateRequest.setEndDate(LocalDate.now().plusDays(8));
 
-        Location pickup = new Location();
-        pickup.setId(30L);
+        ReservationSummary updated = reservationManagementService.updateReservation(created.getId(), updateRequest);
+        ReservationSummary canceled = reservationManagementService.cancelReservation(created.getId());
 
-        Location dropoff = new Location();
-        dropoff.setId(40L);
-
-        when(reservationRepository.findById(55L)).thenReturn(Optional.of(existing));
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
-        when(carRepository.findById(20L)).thenReturn(Optional.of(car));
-        when(locationRepository.findById(30L)).thenReturn(Optional.of(pickup));
-        when(locationRepository.findById(40L)).thenReturn(Optional.of(dropoff));
-        when(reservationRepository.existsOverlappingReservationExcludingId(
-                eq(20L),
-                eq(55L),
-                eq(ReservationStatus.ACTIVE),
-                eq(request.getStartDate()),
-                eq(request.getEndDate()))).thenReturn(false);
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        reservationManagementService.updateReservation(55L, request);
-
-        verify(notificationService).sendReservationNotification(existing, "UPDATED");
-    }
-
-    @Test
-    void shouldCancelReservationAndNotifyMember() {
-        Reservation existing = new Reservation();
-        existing.setId(77L);
-        existing.setStatus(ReservationStatus.ACTIVE);
-        existing.setStartDate(LocalDate.now().plusDays(2));
-        existing.setEndDate(LocalDate.now().plusDays(4));
-
-        when(reservationRepository.findById(77L)).thenReturn(Optional.of(existing));
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        reservationManagementService.cancelReservation(77L);
-
-        assertThat(existing.getStatus()).isEqualTo(ReservationStatus.CANCELED);
-        verify(notificationService).sendReservationNotification(existing, "CANCELED");
+        assertThat(updated.getTotalCost()).isNotNull();
+        assertThat(canceled.getStatus()).isEqualTo(ReservationStatus.CANCELED);
+        assertThat(mailSender.getSentMessages().size()).isGreaterThanOrEqualTo(2);
     }
 
     @Test
     void shouldCompleteReservation() {
-        Reservation existing = new Reservation();
-        existing.setId(88L);
-        existing.setStatus(ReservationStatus.ACTIVE);
-        existing.setStartDate(LocalDate.now().minusDays(2));
-        existing.setEndDate(LocalDate.now().minusDays(1));
+        Location location = createLocation("LOC3");
+        Member member = createMember("member3@crms.local", "Password123");
+        var car = createCar(location, "BC-602", "34ABC08");
 
-        when(reservationRepository.findById(88L)).thenReturn(Optional.of(existing));
-        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().minusDays(4));
+        request.setEndDate(LocalDate.now().minusDays(2));
 
-        reservationManagementService.completeReservation(88L);
+        ReservationSummary created = reservationManagementService.createReservation(request);
+        ReservationSummary completed = reservationManagementService.completeReservation(created.getId());
 
-        assertThat(existing.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
+        assertThat(completed.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
     }
 }

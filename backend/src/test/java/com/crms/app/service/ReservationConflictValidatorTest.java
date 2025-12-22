@@ -1,136 +1,92 @@
 package com.crms.app.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 import com.crms.app.dto.ReservationRequest;
 import com.crms.app.exception.CarUnavailableException;
 import com.crms.app.exception.ReservationConflictException;
-import com.crms.app.mapper.ReservationMapper;
-import com.crms.app.model.Car;
 import com.crms.app.model.CarStatus;
 import com.crms.app.model.Location;
 import com.crms.app.model.Member;
-import com.crms.app.model.Reservation;
-import com.crms.app.model.ReservationStatus;
-import com.crms.app.repository.CarRepository;
-import com.crms.app.repository.EquipmentRepository;
-import com.crms.app.repository.LocationRepository;
-import com.crms.app.repository.MemberRepository;
-import com.crms.app.repository.ReservationRepository;
-import com.crms.app.repository.ServiceRepository;
-import com.crms.app.service.impl.ReservationManagementServiceImpl;
-import java.math.BigDecimal;
+import com.crms.app.support.IntegrationTestSupport;
 import java.time.LocalDate;
-import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 
-@ExtendWith(MockitoExtension.class)
-class ReservationConflictValidatorTest {
+class ReservationConflictValidatorTest extends IntegrationTestSupport {
 
-    @Mock
-    private ReservationRepository reservationRepository;
-
-    @Mock
-    private CarRepository carRepository;
-
-    @Mock
-    private MemberRepository memberRepository;
-
-    @Mock
-    private LocationRepository locationRepository;
-
-    @Mock
-    private ServiceRepository serviceRepository;
-
-    @Mock
-    private EquipmentRepository equipmentRepository;
-
-    @Mock
-    private NotificationService notificationService;
-
-    private ReservationManagementServiceImpl reservationManagementService;
-
-    @BeforeEach
-    void setup() {
-        reservationManagementService = new ReservationManagementServiceImpl(
-                reservationRepository,
-                carRepository,
-                memberRepository,
-                locationRepository,
-                serviceRepository,
-                equipmentRepository,
-                new ReservationMapper(),
-                notificationService);
-    }
+    @Autowired
+    private ReservationManagementService reservationManagementService;
 
     @Test
     void shouldRejectOverlappingReservationDates() {
+        Location location = createLocation("LOC1");
+        Member member = createMember("member@crms.local", "Password123");
+        var car = createCar(location, "BC-700", "34ABC09");
+
         ReservationRequest request = new ReservationRequest();
-        request.setMemberId(1L);
-        request.setCarId(2L);
-        request.setPickupLocationId(3L);
-        request.setDropoffLocationId(4L);
-        request.setStartDate(LocalDate.of(2025, 1, 10));
-        request.setEndDate(LocalDate.of(2025, 1, 15));
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(3));
+        request.setEndDate(LocalDate.now().plusDays(5));
 
-        Member member = new Member();
-        member.setId(1L);
-        member.setDrivingLicenseNumber("DL12345");
+        reservationManagementService.createReservation(request);
 
-        Car car = new Car();
-        car.setId(2L);
-        car.setDailyRate(BigDecimal.valueOf(100));
+        ReservationRequest overlapping = new ReservationRequest();
+        overlapping.setMemberId(member.getId());
+        overlapping.setCarId(car.getId());
+        overlapping.setPickupLocationId(location.getId());
+        overlapping.setDropoffLocationId(location.getId());
+        overlapping.setStartDate(LocalDate.now().plusDays(4));
+        overlapping.setEndDate(LocalDate.now().plusDays(6));
 
-        Location location = new Location();
-        location.setId(3L);
-
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-        when(carRepository.findById(2L)).thenReturn(Optional.of(car));
-        when(locationRepository.findById(3L)).thenReturn(Optional.of(location));
-        when(locationRepository.findById(4L)).thenReturn(Optional.of(location));
-        when(reservationRepository.existsOverlappingReservation(
-                eq(2L),
-                eq(ReservationStatus.ACTIVE),
-                eq(request.getStartDate()),
-                eq(request.getEndDate()))).thenReturn(true);
-
-        assertThatThrownBy(() -> reservationManagementService.createReservation(request))
+        assertThatThrownBy(() -> reservationManagementService.createReservation(overlapping))
                 .isInstanceOf(CarUnavailableException.class)
                 .hasMessageContaining("not available");
     }
 
     @Test
     void shouldRejectModificationAfterPickupDate() {
-        Reservation reservation = new Reservation();
-        reservation.setId(10L);
-        reservation.setStartDate(LocalDate.now());
-        reservation.setEndDate(LocalDate.now().plusDays(2));
-        reservation.setStatus(ReservationStatus.ACTIVE);
-
-        when(reservationRepository.findById(10L)).thenReturn(Optional.of(reservation));
+        Location location = createLocation("LOC2");
+        Member member = createMember("member2@crms.local", "Password123");
+        var car = createCar(location, "BC-701", "34ABC10");
 
         ReservationRequest request = new ReservationRequest();
-        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now());
         request.setEndDate(LocalDate.now().plusDays(2));
 
-        assertThatThrownBy(() -> reservationManagementService.updateReservation(10L, request))
+        var created = reservationManagementService.createReservation(request);
+
+        ReservationRequest updateRequest = new ReservationRequest();
+        updateRequest.setMemberId(member.getId());
+        updateRequest.setCarId(car.getId());
+        updateRequest.setPickupLocationId(location.getId());
+        updateRequest.setDropoffLocationId(location.getId());
+        updateRequest.setStartDate(LocalDate.now().plusDays(1));
+        updateRequest.setEndDate(LocalDate.now().plusDays(3));
+
+        assertThatThrownBy(() -> reservationManagementService.updateReservation(created.getId(), updateRequest))
                 .isInstanceOf(ReservationConflictException.class)
                 .hasMessageContaining("pick-up date");
     }
 
     @Test
     void shouldRejectInvalidDateRange() {
+        Location location = createLocation("LOC3");
+        Member member = createMember("member3@crms.local", "Password123");
+        var car = createCar(location, "BC-702", "34ABC11");
+
         ReservationRequest request = new ReservationRequest();
-        request.setMemberId(1L);
-        request.setCarId(2L);
-        request.setPickupLocationId(3L);
-        request.setDropoffLocationId(4L);
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
         request.setStartDate(LocalDate.of(2025, 1, 10));
         request.setEndDate(LocalDate.of(2025, 1, 5));
 
@@ -141,29 +97,19 @@ class ReservationConflictValidatorTest {
 
     @Test
     void shouldRejectReservationWhenCarUnavailableStatus() {
-        ReservationRequest request = new ReservationRequest();
-        request.setMemberId(1L);
-        request.setCarId(2L);
-        request.setPickupLocationId(3L);
-        request.setDropoffLocationId(4L);
-        request.setStartDate(LocalDate.of(2025, 1, 10));
-        request.setEndDate(LocalDate.of(2025, 1, 12));
-
-        Member member = new Member();
-        member.setId(1L);
-        member.setDrivingLicenseNumber("DL12345");
-
-        Car car = new Car();
-        car.setId(2L);
+        Location location = createLocation("LOC4");
+        Member member = createMember("member4@crms.local", "Password123");
+        var car = createCar(location, "BC-703", "34ABC12");
         car.setStatus(CarStatus.UNAVAILABLE);
+        carRepository.save(car);
 
-        Location location = new Location();
-        location.setId(3L);
-
-        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-        when(carRepository.findById(2L)).thenReturn(Optional.of(car));
-        when(locationRepository.findById(3L)).thenReturn(Optional.of(location));
-        when(locationRepository.findById(4L)).thenReturn(Optional.of(location));
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(member.getId());
+        request.setCarId(car.getId());
+        request.setPickupLocationId(location.getId());
+        request.setDropoffLocationId(location.getId());
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(2));
 
         assertThatThrownBy(() -> reservationManagementService.createReservation(request))
                 .isInstanceOf(CarUnavailableException.class)
