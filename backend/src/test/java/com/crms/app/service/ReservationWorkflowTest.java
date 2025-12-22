@@ -140,8 +140,74 @@ class ReservationWorkflowTest {
         Reservation savedReservation = reservationCaptor.getValue();
 
         assertThat(savedReservation.getReservationNumber()).isNotBlank();
+        assertThat(savedReservation.getStatus()).isEqualTo(ReservationStatus.ACTIVE);
         assertThat(savedReservation.getTotalCost()).isEqualByComparingTo("345");
         assertThat(summary.getTotalCost()).isEqualByComparingTo("345");
         verify(notificationService).sendReservationNotification(savedReservation, "CREATED");
+    }
+
+    @Test
+    void shouldUpdateReservationAndNotifyMember() {
+        Reservation existing = new Reservation();
+        existing.setId(55L);
+        existing.setStatus(ReservationStatus.ACTIVE);
+        existing.setStartDate(LocalDate.now().plusDays(5));
+        existing.setEndDate(LocalDate.now().plusDays(7));
+
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(10L);
+        request.setCarId(20L);
+        request.setPickupLocationId(30L);
+        request.setDropoffLocationId(40L);
+        request.setStartDate(LocalDate.now().plusDays(6));
+        request.setEndDate(LocalDate.now().plusDays(8));
+
+        Member member = new Member();
+        member.setId(10L);
+        member.setDrivingLicenseNumber("ABC123");
+
+        Car car = new Car();
+        car.setId(20L);
+        car.setDailyRate(BigDecimal.valueOf(100));
+
+        Location pickup = new Location();
+        pickup.setId(30L);
+
+        Location dropoff = new Location();
+        dropoff.setId(40L);
+
+        when(reservationRepository.findById(55L)).thenReturn(Optional.of(existing));
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(carRepository.findById(20L)).thenReturn(Optional.of(car));
+        when(locationRepository.findById(30L)).thenReturn(Optional.of(pickup));
+        when(locationRepository.findById(40L)).thenReturn(Optional.of(dropoff));
+        when(reservationRepository.existsOverlappingReservationExcludingId(
+                eq(20L),
+                eq(55L),
+                eq(ReservationStatus.ACTIVE),
+                eq(request.getStartDate()),
+                eq(request.getEndDate()))).thenReturn(false);
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        reservationManagementService.updateReservation(55L, request);
+
+        verify(notificationService).sendReservationNotification(existing, "UPDATED");
+    }
+
+    @Test
+    void shouldCancelReservationAndNotifyMember() {
+        Reservation existing = new Reservation();
+        existing.setId(77L);
+        existing.setStatus(ReservationStatus.ACTIVE);
+        existing.setStartDate(LocalDate.now().plusDays(2));
+        existing.setEndDate(LocalDate.now().plusDays(4));
+
+        when(reservationRepository.findById(77L)).thenReturn(Optional.of(existing));
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        reservationManagementService.cancelReservation(77L);
+
+        assertThat(existing.getStatus()).isEqualTo(ReservationStatus.CANCELED);
+        verify(notificationService).sendReservationNotification(existing, "CANCELED");
     }
 }
