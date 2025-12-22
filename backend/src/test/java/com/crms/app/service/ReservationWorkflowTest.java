@@ -210,4 +210,20 @@ class ReservationWorkflowTest {
         assertThat(existing.getStatus()).isEqualTo(ReservationStatus.CANCELED);
         verify(notificationService).sendReservationNotification(existing, "CANCELED");
     }
+
+    @Test
+    void shouldCompleteReservation() {
+        Reservation existing = new Reservation();
+        existing.setId(88L);
+        existing.setStatus(ReservationStatus.ACTIVE);
+        existing.setStartDate(LocalDate.now().minusDays(2));
+        existing.setEndDate(LocalDate.now().minusDays(1));
+
+        when(reservationRepository.findById(88L)).thenReturn(Optional.of(existing));
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        reservationManagementService.completeReservation(88L);
+
+        assertThat(existing.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
+    }
 }

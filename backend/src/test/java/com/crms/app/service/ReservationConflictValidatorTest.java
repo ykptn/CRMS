@@ -9,6 +9,7 @@ import com.crms.app.exception.CarUnavailableException;
 import com.crms.app.exception.ReservationConflictException;
 import com.crms.app.mapper.ReservationMapper;
 import com.crms.app.model.Car;
+import com.crms.app.model.CarStatus;
 import com.crms.app.model.Location;
 import com.crms.app.model.Member;
 import com.crms.app.model.Reservation;
@@ -121,5 +122,51 @@ class ReservationConflictValidatorTest {
         assertThatThrownBy(() -> reservationManagementService.updateReservation(10L, request))
                 .isInstanceOf(ReservationConflictException.class)
                 .hasMessageContaining("pick-up date");
+    }
+
+    @Test
+    void shouldRejectInvalidDateRange() {
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(1L);
+        request.setCarId(2L);
+        request.setPickupLocationId(3L);
+        request.setDropoffLocationId(4L);
+        request.setStartDate(LocalDate.of(2025, 1, 10));
+        request.setEndDate(LocalDate.of(2025, 1, 5));
+
+        assertThatThrownBy(() -> reservationManagementService.createReservation(request))
+                .isInstanceOf(ReservationConflictException.class)
+                .hasMessageContaining("End date");
+    }
+
+    @Test
+    void shouldRejectReservationWhenCarUnavailableStatus() {
+        ReservationRequest request = new ReservationRequest();
+        request.setMemberId(1L);
+        request.setCarId(2L);
+        request.setPickupLocationId(3L);
+        request.setDropoffLocationId(4L);
+        request.setStartDate(LocalDate.of(2025, 1, 10));
+        request.setEndDate(LocalDate.of(2025, 1, 12));
+
+        Member member = new Member();
+        member.setId(1L);
+        member.setDrivingLicenseNumber("DL12345");
+
+        Car car = new Car();
+        car.setId(2L);
+        car.setStatus(CarStatus.UNAVAILABLE);
+
+        Location location = new Location();
+        location.setId(3L);
+
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(carRepository.findById(2L)).thenReturn(Optional.of(car));
+        when(locationRepository.findById(3L)).thenReturn(Optional.of(location));
+        when(locationRepository.findById(4L)).thenReturn(Optional.of(location));
+
+        assertThatThrownBy(() -> reservationManagementService.createReservation(request))
+                .isInstanceOf(CarUnavailableException.class)
+                .hasMessageContaining("not available");
     }
 }

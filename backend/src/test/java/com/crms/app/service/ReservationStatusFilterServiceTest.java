@@ -66,4 +66,36 @@ class ReservationStatusFilterServiceTest {
         assertThat(results).containsExactly(summary);
         verify(reservationRepository).findAllByStatusOrderByStartDateDesc(ReservationStatus.ACTIVE);
     }
+
+    @Test
+    void shouldExportReservationsAsCsv() {
+        Reservation reservation = new Reservation();
+        ReservationSummary summary = new ReservationSummary();
+        summary.setReservationNumber("RES-100");
+        summary.setStatus(ReservationStatus.ACTIVE);
+
+        when(reservationRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(reservation));
+        when(reservationMapper.toSummary(reservation)).thenReturn(summary);
+
+        byte[] csv = reportingService.exportReservationsCsv(null);
+
+        String output = new String(csv, java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(output).contains("reservationNumber,status,startDate,endDate,totalCost,memberId,carId,pickupLocationId,dropoffLocationId");
+        assertThat(output).contains("RES-100");
+    }
+
+    @Test
+    void shouldExportReservationsAsPdf() {
+        Reservation reservation = new Reservation();
+        ReservationSummary summary = new ReservationSummary();
+        summary.setReservationNumber("RES-200");
+        summary.setStatus(ReservationStatus.CANCELED);
+
+        when(reservationRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(reservation));
+        when(reservationMapper.toSummary(reservation)).thenReturn(summary);
+
+        byte[] pdf = reportingService.exportReservationsPdf(null);
+
+        assertThat(pdf).isNotEmpty();
+    }
 }

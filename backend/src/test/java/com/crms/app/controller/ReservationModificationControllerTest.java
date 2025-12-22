@@ -54,4 +54,45 @@ class ReservationModificationControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isSameAs(summary);
     }
+
+    @Test
+    void shouldCreateReservation() {
+        ReservationSummary summary = new ReservationSummary();
+        summary.setId(30L);
+
+        when(reservationManagementService.createReservation(any(ReservationRequest.class)))
+                .thenReturn(summary);
+
+        var response = reservationController.createReservation(new ReservationRequest());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isSameAs(summary);
+    }
+
+    @Test
+    void shouldQuoteReservation() {
+        var quote = new com.crms.app.dto.ReservationQuoteResponse();
+        quote.setTotalCost(java.math.BigDecimal.valueOf(150));
+
+        when(reservationManagementService.quoteReservation(any(ReservationRequest.class)))
+                .thenReturn(quote);
+
+        var response = reservationController.quoteReservation(new ReservationRequest());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(quote);
+    }
+
+    @Test
+    void shouldCompleteReservation() {
+        ReservationSummary summary = new ReservationSummary();
+        summary.setId(40L);
+
+        when(reservationManagementService.completeReservation(40L)).thenReturn(summary);
+
+        var response = reservationController.completeReservation(40L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(summary);
+    }
 }
