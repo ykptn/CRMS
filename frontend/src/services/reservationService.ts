@@ -9,6 +9,20 @@ import { ReservationDraft, ReservationModel, ReservationStatus } from '../types/
 import { AdditionalService } from '../types/service';
 import { CarModel } from '../types/car';
 import { carCatalogService } from './carCatalogService';
+import { apiClient } from './apiClient';
+
+type ApiReservationSummary = {
+  id: number;
+  reservationNumber: string;
+  memberId: number;
+  carId: number;
+  pickupLocationId: number;
+  dropoffLocationId: number;
+  startDate: string;
+  endDate: string;
+  totalCost: number;
+  status: 'ACTIVE' | 'CANCELED' | 'COMPLETED';
+};
 
 function diffInDays(start: Date, end: Date): number {
   const msPerDay = 1000 * 60 * 60 * 24;
@@ -30,6 +44,44 @@ function hasOverlap(
 
 export class ReservationService {
   async createReservation(memberId: string, draft: ReservationDraft): Promise<ReservationModel> {
+    const numericMemberId = Number(memberId);
+    const numericCarId = Number(draft.carId);
+    const numericPickupId = Number(draft.pickUpLocationId);
+    const numericDropoffId = Number(draft.dropOffLocationId);
+    const canUseApi =
+      !Number.isNaN(numericMemberId) &&
+      !Number.isNaN(numericCarId) &&
+      !Number.isNaN(numericPickupId) &&
+      !Number.isNaN(numericDropoffId);
+
+    if (canUseApi && draft.pickUpDate && draft.dropOffDate) {
+      try {
+        const serviceIds = draft.services ?? [];
+        const additionalServiceIds = serviceIds
+          .map((id) => Number(id))
+          .filter((id) => !Number.isNaN(id));
+        const response = await apiClient.post<ApiReservationSummary>('/api/reservations', {
+          memberId: numericMemberId,
+          carId: numericCarId,
+          pickupLocationId: numericPickupId,
+          dropoffLocationId: numericDropoffId,
+          startDate: draft.pickUpDate,
+          endDate: draft.dropOffDate,
+          additionalServiceIds,
+        });
+        const services = listServices().filter((service) =>
+          serviceIds.includes(service.id)
+        );
+        return this.mapReservation(response, services, draft.notes);
+      } catch (err) {
+        // Fall back to mock flow.
+      }
+    }
+
+    return this.createReservationMock(memberId, draft);
+  }
+
+  private async createReservationMock(memberId: string, draft: ReservationDraft): Promise<ReservationModel> {
     if (!draft.carId || !draft.pickUpDate || !draft.dropOffDate || !draft.pickUpLocationId || !draft.dropOffLocationId) {
       throw new Error('Reservation data is incomplete.');
     }
@@ -83,14 +135,40 @@ export class ReservationService {
   }
 
   async listMemberReservations(memberId: string): Promise<ReservationModel[]> {
+    const numericMemberId = Number(memberId);
+    if (!Number.isNaN(numericMemberId)) {
+      try {
+        const reservations = await apiClient.get<ApiReservationSummary[]>(
+          `/api/admin/members/${numericMemberId}/reservations`,
+          { auth: true }
+        );
+        return reservations.map((reservation) => this.mapReservation(reservation));
+      } catch (err) {
+        // Fall back to mock data.
+      }
+    }
     return listReservations().filter((reservation) => reservation.memberId === memberId);
   }
 
   async listAllReservations(): Promise<ReservationModel[]> {
-    return listReservations();
+    try {
+      const reservations = await apiClient.get<ApiReservationSummary[]>('/api/admin/reservations', { auth: true });
+      return reservations.map((reservation) => this.mapReservation(reservation));
+    } catch (err) {
+      return listReservations();
+    }
   }
 
   async getReservationById(reservationId: string): Promise<ReservationModel | undefined> {
+    const numericId = Number(reservationId);
+    if (!Number.isNaN(numericId)) {
+      try {
+        const reservations = await apiClient.get<ApiReservationSummary[]>('/api/admin/reservations', { auth: true });
+        return reservations.map((reservation) => this.mapReservation(reservation)).find((reservation) => reservation.id === reservationId);
+      } catch (err) {
+        // Fall back to mock data.
+      }
+    }
     return listReservations().find((reservation) => reservation.id === reservationId);
   }
 
@@ -98,6 +176,22 @@ export class ReservationService {
     reservationId: string,
     status: ReservationStatus
   ): Promise<ReservationModel> {
+    const numericId = Number(reservationId);
+    if (!Number.isNaN(numericId)) {
+      try {
+        if (status === 'Cancelled') {
+          const response = await apiClient.post<ApiReservationSummary>(`/api/reservations/${numericId}/cancel`);
+          return this.mapReservation(response);
+        }
+        if (status === 'Completed') {
+          const response = await apiClient.post<ApiReservationSummary>(`/api/reservations/${numericId}/complete`);
+          return this.mapReservation(response);
+        }
+      } catch (err) {
+        // Fall back to mock update.
+      }
+    }
+
     let updated: ReservationModel | undefined;
     mutateDb((db) => {
       db.reservations = db.reservations.map((reservation) => {
@@ -129,6 +223,39 @@ export class ReservationService {
 
   async cancelReservation(reservationId: string): Promise<ReservationModel> {
     return this.updateReservationStatus(reservationId, 'Cancelled');
+  }
+
+  private mapReservation(
+    reservation: ApiReservationSummary,
+    services: AdditionalService[] = [],
+    notes?: string
+  ): ReservationModel {
+    return {
+      id: String(reservation.id),
+      reservationNumber: reservation.reservationNumber,
+      memberId: String(reservation.memberId),
+      carId: String(reservation.carId),
+      pickUpLocationId: String(reservation.pickupLocationId),
+      dropOffLocationId: String(reservation.dropoffLocationId),
+      pickUpDate: reservation.startDate,
+      dropOffDate: reservation.endDate,
+      totalCost: Number(reservation.totalCost),
+      status: this.mapStatus(reservation.status),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      services,
+      notes,
+    };
+  }
+
+  private mapStatus(status: ApiReservationSummary['status']): ReservationStatus {
+    if (status === 'COMPLETED') {
+      return 'Completed';
+    }
+    if (status === 'CANCELED') {
+      return 'Cancelled';
+    }
+    return 'Active';
   }
 
   private calculateTotalCost(

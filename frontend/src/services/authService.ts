@@ -1,4 +1,5 @@
 import { addUser, findUserByEmail, generateId, updateUser } from './mockDatabase';
+import { apiClient } from './apiClient';
 import { AuthState, AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
 
 const SESSION_KEY = 'crms-auth-session';
@@ -40,23 +41,59 @@ function sanitizeUser(user: AuthUser & { password?: string }): AuthUser {
 
 export class AuthService {
   async login(payload: LoginPayload): Promise<AuthState> {
-    const existing = findUserByEmail(payload.email);
-    if (!existing || existing.password !== payload.password) {
-      throw new Error('Invalid email or password.');
-    }
+    try {
+      await apiClient.post<void>('/api/auth/login', payload);
+      const existing = findUserByEmail(payload.email);
+      const user: AuthUser = existing
+        ? sanitizeUser(existing)
+        : {
+            id: payload.email,
+            fullName: payload.email.split('@')[0] ?? 'Member',
+            email: payload.email,
+            role: 'member',
+            phone: '',
+            address: '',
+            licenseNumber: '',
+            createdAt: new Date().toISOString(),
+          };
+      const authState: AuthState = {
+        user,
+        token: btoa(`${payload.email}:${payload.password}`),
+      };
+      persistSession(authState);
+      return authState;
+    } catch (err) {
+      const existing = findUserByEmail(payload.email);
+      if (!existing || existing.password !== payload.password) {
+        throw new Error('Invalid email or password.');
+      }
 
-    const authState: AuthState = {
-      user: sanitizeUser(existing),
-      token: btoa(`${existing.id}:${Date.now()}`),
-    };
-    persistSession(authState);
-    return authState;
+      const authState: AuthState = {
+        user: sanitizeUser(existing),
+        token: btoa(`${existing.id}:${Date.now()}`),
+      };
+      persistSession(authState);
+      return authState;
+    }
   }
 
   async register(payload: RegisterPayload): Promise<AuthState> {
     const existing = findUserByEmail(payload.email);
     if (existing) {
       throw new Error('Email is already registered.');
+    }
+
+    try {
+      await apiClient.post<void>('/api/auth/register', {
+        fullName: payload.fullName,
+        email: payload.email.toLowerCase(),
+        phone: payload.phone,
+        address: payload.address,
+        drivingLicenseNumber: payload.licenseNumber,
+        password: payload.password,
+      });
+    } catch (err) {
+      // Keep mock registration as fallback for local usage.
     }
 
     const newUser: AuthUser = {
@@ -73,7 +110,7 @@ export class AuthService {
     addUser({ ...newUser, password: payload.password });
     const authState: AuthState = {
       user: newUser,
-      token: btoa(`${newUser.id}:${Date.now()}`),
+      token: btoa(`${payload.email}:${payload.password}`),
     };
     persistSession(authState);
     return authState;
