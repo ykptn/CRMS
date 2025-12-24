@@ -24,6 +24,9 @@ public class Location {
     @Column(nullable = false)
     private String address;
 
+    @Column(length = 30)
+    private String phone;
+
     public Long getId() {
         return id;
     }
@@ -54,5 +57,13 @@ public class Location {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

@@ -85,6 +85,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         if (!LICENSE_PATTERN.matcher(normalizedLicense).matches()) {
             throw new CrmsException("Driving license number format is invalid.");
         }
+        if (request.getDrivingLicenseExpiry() == null) {
+            throw new CrmsException("Driving license expiry is required.");
+        }
     }
 
     private String normalize(String value) {

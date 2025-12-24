@@ -42,8 +42,28 @@ public class CrmsExceptionHandler {
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
     public ResponseEntity<ErrorResponse> handleValidation(Exception ex) {
+        String message = "Validation failed";
+        if (ex instanceof MethodArgumentNotValidException manve) {
+            String details = manve.getBindingResult().getFieldErrors().stream()
+                    .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                    .distinct()
+                    .reduce((left, right) -> left + "; " + right)
+                    .orElse(null);
+            if (details != null && !details.isBlank()) {
+                message = details;
+            }
+        } else if (ex instanceof ConstraintViolationException cve) {
+            String details = cve.getConstraintViolations().stream()
+                    .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                    .distinct()
+                    .reduce((left, right) -> left + "; " + right)
+                    .orElse(null);
+            if (details != null && !details.isBlank()) {
+                message = details;
+            }
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("Validation failed"));
+                .body(new ErrorResponse(message));
     }
 
     public record ErrorResponse(String message) {

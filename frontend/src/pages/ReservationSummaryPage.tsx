@@ -3,39 +3,60 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import ReservationSummaryCard from '../components/ReservationSummaryCard';
 import { reservationService } from '../services/reservationService';
 import { carCatalogService } from '../services/carCatalogService';
+import { useAuth } from '../hooks/useAuth';
 import type { ReservationModel } from '../types/reservation';
 import type { BranchLocation, CarModel } from '../types/car';
 
 export default function ReservationSummaryPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const reservationId = (location.state as { reservationId?: string })?.reservationId;
+  const locationState = location.state as { reservationId?: string; reservation?: ReservationModel };
+  const reservationId = locationState?.reservationId;
+  const reservationFromState = locationState?.reservation;
+  const { user } = useAuth();
   const [reservation, setReservation] = useState<ReservationModel | null>(null);
   const [car, setCar] = useState<CarModel | undefined>();
   const [branches, setBranches] = useState<BranchLocation[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!reservationId) {
-      setError('Reservation identifier missing.');
-      return;
-    }
-
     (async () => {
-      const [res, locations] = await Promise.all([
-        reservationService.getReservationById(reservationId),
-        carCatalogService.listLocations(),
-      ]);
-      if (!res) {
-        setError('Reservation could not be found.');
-        return;
+      try {
+        if (reservationFromState) {
+          const locations = await carCatalogService.listLocations();
+          setReservation(reservationFromState);
+          setBranches(locations);
+          const carDetails = await carCatalogService.getCarDetails(reservationFromState.carId);
+          setCar(carDetails);
+          return;
+        }
+
+        if (!reservationId) {
+          setError('Reservation identifier missing.');
+          return;
+        }
+
+        const [res, locations] = await Promise.all([
+          user?.role === 'member'
+            ? reservationService.listMemberReservations(user.id).then((items) =>
+                items.find((item) => item.id === reservationId)
+              )
+            : reservationService.getReservationById(reservationId),
+          carCatalogService.listLocations(),
+        ]);
+        if (!res) {
+          setError('Reservation could not be found.');
+          return;
+        }
+        setReservation(res);
+        setBranches(locations);
+        const carDetails = await carCatalogService.getCarDetails(res.carId);
+        setCar(carDetails);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unable to load reservation details.');
       }
-      setReservation(res);
-      setBranches(locations);
-      const carDetails = await carCatalogService.getCarDetails(res.carId);
-      setCar(carDetails);
     })();
-  }, [reservationId]);
+  }, [reservationFromState, reservationId, user]);
 
   if (error) {
     return (

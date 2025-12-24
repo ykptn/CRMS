@@ -11,6 +11,7 @@ export default function RegisterPage() {
     phone: '',
     address: '',
     licenseNumber: '',
+    licenseExpiry: '',
     password: '',
   });
 
@@ -42,16 +43,21 @@ export default function RegisterPage() {
             type="email"
             value={form.email}
             onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+            pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
             required
           />
+          <small>Use a valid email with a domain (example: name@domain.com).</small>
         </div>
         <div>
           <label>Phone</label>
           <input
             value={form.phone}
             onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+            placeholder="+90 555 123 4567"
+            pattern="^\\+?[0-9()\\-\\s]{7,20}$"
             required
           />
+          <small>Use 7-20 digits, spaces, parentheses, or dashes.</small>
         </div>
         <div>
           <label>Address</label>
@@ -66,6 +72,18 @@ export default function RegisterPage() {
           <input
             value={form.licenseNumber}
             onChange={(event) => setForm((prev) => ({ ...prev, licenseNumber: event.target.value }))}
+            placeholder="ABC12345"
+            pattern="^[A-Za-z0-9]{5,20}$"
+            required
+          />
+          <small>5-20 letters or digits only.</small>
+        </div>
+        <div>
+          <label>Driving License Expiry</label>
+          <input
+            type="date"
+            value={form.licenseExpiry}
+            onChange={(event) => setForm((prev) => ({ ...prev, licenseExpiry: event.target.value }))}
             required
           />
         </div>
@@ -75,8 +93,10 @@ export default function RegisterPage() {
             type="password"
             value={form.password}
             onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+            minLength={8}
             required
           />
+          <small>Minimum 8 characters.</small>
         </div>
         {error && <p style={{ color: '#dc2626' }}>{error}</p>}
         <button type="submit" disabled={loading}>

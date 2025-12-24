@@ -10,6 +10,7 @@ export interface RegisterPayload extends LoginPayload {
   phone: string;
   address: string;
   licenseNumber: string;
+  licenseExpiry: string;
 }
 
 export interface AuthUser {
@@ -20,6 +21,7 @@ export interface AuthUser {
   phone: string;
   address: string;
   licenseNumber: string;
+  licenseExpiry: string;
   createdAt: string;
   preferredLocationId?: string;
 }

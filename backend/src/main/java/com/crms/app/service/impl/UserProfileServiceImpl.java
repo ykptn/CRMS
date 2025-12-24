@@ -1,11 +1,14 @@
 package com.crms.app.service.impl;
 
+import com.crms.app.dto.AuthProfileResponse;
 import com.crms.app.dto.MemberProfileUpdateRequest;
 import com.crms.app.exception.CrmsException;
 import com.crms.app.exception.ResourceNotFoundException;
 import com.crms.app.model.Member;
 import com.crms.app.model.User;
+import com.crms.app.model.UserRole;
 import com.crms.app.repository.MemberRepository;
+import com.crms.app.repository.UserRepository;
 import com.crms.app.service.UserProfileService;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -24,9 +27,34 @@ public class UserProfileServiceImpl implements UserProfileService {
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?[0-9()\\-\\s]{7,20}$");
 
     private final MemberRepository memberRepository;
+    private final UserRepository userRepository;
 
-    public UserProfileServiceImpl(MemberRepository memberRepository) {
+    public UserProfileServiceImpl(MemberRepository memberRepository,
+                                  UserRepository userRepository) {
         this.memberRepository = memberRepository;
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    public AuthProfileResponse getCurrentProfile() {
+        User user = resolveCurrentUser();
+        AuthProfileResponse response = new AuthProfileResponse();
+        response.setId(user.getId());
+        response.setEmail(user.getEmail());
+        response.setFullName(user.getFullName());
+        response.setPhone(user.getPhone());
+        response.setAddress(user.getAddress());
+        response.setRole(user.getRole().name());
+        if (user.getRole() == UserRole.MEMBER) {
+            memberRepository.findByEmail(normalizeEmail(user.getEmail()))
+                    .ifPresent(member -> {
+                        response.setDrivingLicenseNumber(member.getDrivingLicenseNumber());
+                        if (member.getDrivingLicenseExpiry() != null) {
+                            response.setDrivingLicenseExpiry(member.getDrivingLicenseExpiry().toString());
+                        }
+                    });
+        }
+        return response;
     }
 
     @Override
@@ -43,6 +71,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         member.setPhone(normalize(request.getPhone()));
         member.setAddress(normalize(request.getAddress()));
         member.setDrivingLicenseNumber(normalizeLicense(request.getDrivingLicenseNumber()));
+        member.setDrivingLicenseExpiry(request.getDrivingLicenseExpiry());
         memberRepository.save(member);
     }
 
@@ -50,8 +79,9 @@ public class UserProfileServiceImpl implements UserProfileService {
         if (!StringUtils.hasText(request.getFullName())
                 || !StringUtils.hasText(request.getPhone())
                 || !StringUtils.hasText(request.getAddress())
-                || !StringUtils.hasText(request.getDrivingLicenseNumber())) {
-            throw new CrmsException("Full name, phone, address, and driving license number are required.");
+                || !StringUtils.hasText(request.getDrivingLicenseNumber())
+                || request.getDrivingLicenseExpiry() == null) {
+            throw new CrmsException("Full name, phone, address, driving license number, and expiry are required.");
         }
     }
 
@@ -70,6 +100,12 @@ public class UserProfileServiceImpl implements UserProfileService {
     }
 
     private Member resolveCurrentMember() {
+        User user = resolveCurrentUser();
+        return memberRepository.findByEmail(normalizeEmail(user.getEmail()))
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found for email: " + user.getEmail()));
+    }
+
+    private User resolveCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new CrmsException("Authenticated member is required to update profile.");
@@ -78,8 +114,8 @@ public class UserProfileServiceImpl implements UserProfileService {
         if (!StringUtils.hasText(email)) {
             throw new CrmsException("Authenticated member email is missing.");
         }
-        return memberRepository.findByEmail(normalizeEmail(email))
-                .orElseThrow(() -> new ResourceNotFoundException("Member not found for email: " + email));
+        return userRepository.findByEmail(normalizeEmail(email))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found for email: " + email));
     }
 
     private String extractEmail(Object principal) {

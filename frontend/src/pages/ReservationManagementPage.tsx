@@ -11,10 +11,11 @@ export default function ReservationManagementPage() {
   const [branches, setBranches] = useState<BranchLocation[]>([]);
   const [cars, setCars] = useState<CarModel[]>([]);
   const [members, setMembers] = useState<AuthUser[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'All' | ReservationModel['status']>('All');
 
-  const refresh = () => {
+  const refresh = (status: typeof statusFilter = statusFilter) => {
     Promise.all([
-      adminService.listReservations(),
+      adminService.listReservations(status === 'All' ? undefined : status),
       adminService.listBranches(),
       carCatalogService.getCars(),
       adminService.listMembers(),
@@ -38,6 +39,22 @@ export default function ReservationManagementPage() {
   return (
     <div>
       <h2>Reservation management</h2>
+      <div style={{ margin: '0.5rem 0' }}>
+        <label>Filter status </label>
+        <select
+          value={statusFilter}
+          onChange={(event) => {
+            const next = event.target.value as typeof statusFilter;
+            setStatusFilter(next);
+            refresh(next);
+          }}
+        >
+          <option value="All">All</option>
+          <option value="Active">Active</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
       <table width="100%" cellPadding={10}>
         <thead>
           <tr>

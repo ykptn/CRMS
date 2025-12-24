@@ -83,6 +83,7 @@ public class LocationManagementServiceImpl implements LocationManagementService 
         location.setCode(normalizeCode(request.getCode()));
         location.setName(normalize(request.getName()));
         location.setAddress(normalize(request.getAddress()));
+        location.setPhone(normalize(request.getPhone()));
     }
 
     private String normalize(String value) {

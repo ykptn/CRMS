@@ -221,8 +221,10 @@ public class ReservationManagementServiceImpl implements ReservationManagementSe
     }
 
     private void ensureMemberHasLicense(Member member) {
-        if (!StringUtils.hasText(member.getDrivingLicenseNumber())) {
-            throw new ReservationConflictException("Member must provide a valid driving license number.");
+        if (!StringUtils.hasText(member.getDrivingLicenseNumber())
+                || member.getDrivingLicenseExpiry() == null
+                || member.getDrivingLicenseExpiry().isBefore(LocalDate.now())) {
+            throw new ReservationConflictException("Valid license required.");
         }
     }
 

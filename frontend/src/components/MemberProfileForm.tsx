@@ -38,6 +38,7 @@ export default function MemberProfileForm({ profile, locations, onSubmit }: Memb
         phone: formData.phone,
         address: formData.address,
         licenseNumber: formData.licenseNumber,
+        licenseExpiry: formData.licenseExpiry,
         preferredLocationId: formData.preferredLocationId,
       });
       setMessage('Profile saved successfully.');
@@ -69,6 +70,16 @@ export default function MemberProfileForm({ profile, locations, onSubmit }: Memb
           <input
             name="licenseNumber"
             value={formData.licenseNumber}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div>
+          <label>License Expiry</label>
+          <input
+            type="date"
+            name="licenseExpiry"
+            value={formData.licenseExpiry ?? ''}
             onChange={handleChange}
             required
           />

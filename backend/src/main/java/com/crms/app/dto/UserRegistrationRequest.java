@@ -2,8 +2,10 @@ package com.crms.app.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 
 public class UserRegistrationRequest {
 
@@ -12,6 +14,8 @@ public class UserRegistrationRequest {
 
     @NotBlank
     @Email
+    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+            message = "Email must include a valid domain and TLD.")
     private String email;
 
     @NotBlank
@@ -28,6 +32,9 @@ public class UserRegistrationRequest {
     @NotBlank
     @Pattern(regexp = "^[A-Za-z0-9]{5,20}$")
     private String drivingLicenseNumber;
+
+    @NotNull
+    private LocalDate drivingLicenseExpiry;
 
     public String getFullName() {
         return fullName;
@@ -75,5 +82,13 @@ public class UserRegistrationRequest {
 
     public void setDrivingLicenseNumber(String drivingLicenseNumber) {
         this.drivingLicenseNumber = drivingLicenseNumber;
+    }
+
+    public LocalDate getDrivingLicenseExpiry() {
+        return drivingLicenseExpiry;
+    }
+
+    public void setDrivingLicenseExpiry(LocalDate drivingLicenseExpiry) {
+        this.drivingLicenseExpiry = drivingLicenseExpiry;
     }
 }

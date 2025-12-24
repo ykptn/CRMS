@@ -14,6 +14,7 @@ public class LocationMapper {
         response.setCode(location.getCode());
         response.setName(location.getName());
         response.setAddress(location.getAddress());
+        response.setPhone(location.getPhone());
         return response;
     }
 
@@ -21,5 +22,6 @@ public class LocationMapper {
         location.setCode(request.getCode());
         location.setName(request.getName());
         location.setAddress(request.getAddress());
+        location.setPhone(request.getPhone());
     }
 }

@@ -1,25 +1,31 @@
 package com.crms.app.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import java.time.LocalDate;
+public class AuthProfileResponse {
 
-public class MemberProfileUpdateRequest {
-
-    @NotBlank
+    private Long id;
+    private String email;
     private String fullName;
-
-    @NotBlank
     private String phone;
-
-    @NotBlank
     private String address;
-
-    @NotBlank
+    private String role;
     private String drivingLicenseNumber;
+    private String drivingLicenseExpiry;
 
-    @NotNull
-    private LocalDate drivingLicenseExpiry;
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
     public String getFullName() {
         return fullName;
@@ -45,6 +51,14 @@ public class MemberProfileUpdateRequest {
         this.address = address;
     }
 
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public String getDrivingLicenseNumber() {
         return drivingLicenseNumber;
     }
@@ -53,11 +67,11 @@ public class MemberProfileUpdateRequest {
         this.drivingLicenseNumber = drivingLicenseNumber;
     }
 
-    public LocalDate getDrivingLicenseExpiry() {
+    public String getDrivingLicenseExpiry() {
         return drivingLicenseExpiry;
     }
 
-    public void setDrivingLicenseExpiry(LocalDate drivingLicenseExpiry) {
+    public void setDrivingLicenseExpiry(String drivingLicenseExpiry) {
         this.drivingLicenseExpiry = drivingLicenseExpiry;
     }
 }

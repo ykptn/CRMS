@@ -11,6 +11,9 @@ export default function ReservationHistoryPage() {
   const [reservations, setReservations] = useState<ReservationModel[]>([]);
   const [cars, setCars] = useState<CarModel[]>([]);
   const [locations, setLocations] = useState<BranchLocation[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDropOffId, setEditingDropOffId] = useState<string>('');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -36,9 +39,43 @@ export default function ReservationHistoryPage() {
     return <p>You have not created any reservations yet.</p>;
   }
 
+  const startEdit = (reservation: ReservationModel) => {
+    setEditingId(reservation.id);
+    setEditingDropOffId(reservation.dropOffLocationId);
+    setActionError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingDropOffId('');
+  };
+
+  const handleSave = async (reservation: ReservationModel) => {
+    try {
+      const updated = await reservationService.updateReservation(reservation, {
+        dropOffLocationId: editingDropOffId,
+      });
+      setReservations((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      cancelEdit();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Unable to update reservation.');
+    }
+  };
+
+  const handleCancel = async (reservation: ReservationModel) => {
+    try {
+      const updated = await reservationService.cancelReservation(reservation.id);
+      setReservations((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setActionError(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Unable to cancel reservation.');
+    }
+  };
+
   return (
     <div>
       <h2>Your reservations</h2>
+      {actionError && <p style={{ color: '#dc2626' }}>{actionError}</p>}
       <table width="100%" cellPadding={12}>
         <thead>
           <tr>
@@ -48,6 +85,7 @@ export default function ReservationHistoryPage() {
             <th align="left">Drop-off</th>
             <th align="left">Status</th>
             <th align="left">Total</th>
+            <th align="left">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -55,6 +93,7 @@ export default function ReservationHistoryPage() {
             const car = cars.find((c) => c.id === reservation.carId);
             const pick = locations.find((loc) => loc.id === reservation.pickUpLocationId);
             const drop = locations.find((loc) => loc.id === reservation.dropOffLocationId);
+            const isEditing = editingId === reservation.id;
             return (
               <tr key={reservation.id}>
                 <td>{reservation.reservationNumber}</td>
@@ -67,12 +106,59 @@ export default function ReservationHistoryPage() {
                   <small>{pick?.name}</small>
                 </td>
                 <td>
-                  {formatDate(reservation.dropOffDate)}
-                  <br />
-                  <small>{drop?.name}</small>
+                  {isEditing ? (
+                    <div style={{ display: 'grid', gap: '0.25rem' }}>
+                      <select
+                        value={editingDropOffId}
+                        onChange={(event) => setEditingDropOffId(event.target.value)}
+                      >
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                      <small>Current: {drop?.name}</small>
+                    </div>
+                  ) : (
+                    <>
+                      {formatDate(reservation.dropOffDate)}
+                      <br />
+                      <small>{drop?.name}</small>
+                    </>
+                  )}
                 </td>
                 <td>{reservation.status}</td>
                 <td>₺{reservation.totalCost}</td>
+                <td>
+                  {reservation.status === 'Active' ? (
+                    isEditing ? (
+                      <>
+                        <button type="button" onClick={() => handleSave(reservation)}>
+                          Save
+                        </button>
+                        <button type="button" onClick={cancelEdit} style={{ marginLeft: '0.5rem' }}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => startEdit(reservation)}>
+                          Edit drop-off
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCancel(reservation)}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Cancel reservation
+                        </button>
+                      </>
+                    )
+                  ) : (
+                    <span>-</span>
+                  )}
+                </td>
               </tr>
             );
           })}

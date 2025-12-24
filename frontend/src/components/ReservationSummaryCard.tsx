@@ -23,6 +23,18 @@ export default function ReservationSummaryCard({
 }: ReservationSummaryCardProps) {
   const pickUp = locations.find((location) => location.id === reservation.pickUpLocationId);
   const dropOff = locations.find((location) => location.id === reservation.dropOffLocationId);
+  const rentalDays = (() => {
+    const start = new Date(reservation.pickUpDate);
+    const end = new Date(reservation.dropOffDate);
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const diff = Math.ceil((end.getTime() - start.getTime()) / msPerDay);
+    return Math.max(1, diff);
+  })();
+  const extrasPerDay =
+    reservation.services.reduce((sum, service) => sum + service.price, 0) +
+    reservation.equipments.reduce((sum, item) => sum + item.price, 0);
+  const baseCost = car ? rentalDays * car.dailyPrice : null;
+  const extrasCost = extrasPerDay * rentalDays;
 
   return (
     <section style={cardStyle}>
@@ -44,6 +56,11 @@ export default function ReservationSummaryCard({
       <p style={{ margin: '0 0 0.25rem 0' }}>
         Total: <strong>₺{reservation.totalCost.toFixed(2)}</strong>
       </p>
+      {car && (
+        <p style={{ margin: '0 0 0.25rem 0', color: '#6b7280' }}>
+          {rentalDays} days · Base ₺{baseCost?.toFixed(2)} · Extras ₺{extrasCost.toFixed(2)}
+        </p>
+      )}
       {reservation.services.length > 0 && (
         <div>
           <p style={{ margin: '0.5rem 0 0.25rem 0' }}>Additional services:</p>
@@ -51,6 +68,18 @@ export default function ReservationSummaryCard({
             {reservation.services.map((service) => (
               <li key={service.id}>
                 {service.name} – ₺{service.price}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {reservation.equipments.length > 0 && (
+        <div>
+          <p style={{ margin: '0.5rem 0 0.25rem 0' }}>Equipment:</p>
+          <ul>
+            {reservation.equipments.map((item) => (
+              <li key={item.id}>
+                {item.name} – ₺{item.price}
               </li>
             ))}
           </ul>

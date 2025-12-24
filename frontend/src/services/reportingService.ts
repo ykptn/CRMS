@@ -1,4 +1,3 @@
-import { listReservations, listUsers, listCars, getLocations } from './mockDatabase';
 import { ReservationStatus } from '../types/reservation';
 import { apiClient } from './apiClient';
 
@@ -21,70 +20,63 @@ export interface ReportingSummary {
 
 export class ReportingService {
   async buildReservationReport(): Promise<ReportingSummary> {
-    let reservations = listReservations();
-    let users = listUsers();
-    let cars = listCars();
-    let locations = getLocations();
-
-    try {
-      const [apiReservations, apiMembers, apiCars, apiLocations] = await Promise.all([
-        apiClient.get<any[]>('/api/admin/reservations', { auth: true }),
-        apiClient.get<any[]>('/api/admin/members', { auth: true }),
-        apiClient.get<any[]>('/api/cars'),
-        apiClient.get<any[]>('/api/admin/locations', { auth: true }),
-      ]);
-      reservations = apiReservations.map((reservation) => ({
-        id: String(reservation.id),
-        reservationNumber: reservation.reservationNumber,
-        memberId: String(reservation.memberId),
-        carId: String(reservation.carId),
-        pickUpLocationId: String(reservation.pickupLocationId),
-        dropOffLocationId: String(reservation.dropoffLocationId),
-        pickUpDate: reservation.startDate,
-        dropOffDate: reservation.endDate,
-        totalCost: Number(reservation.totalCost),
-        status: reservation.status === 'COMPLETED' ? 'Completed' : reservation.status === 'CANCELED' ? 'Cancelled' : 'Active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        services: [],
-      }));
-      users = apiMembers.map((member) => ({
-        id: String(member.id),
-        fullName: member.fullName,
-        email: member.email,
-        role: 'member',
-        phone: member.phone ?? '',
-        address: member.address ?? '',
-        licenseNumber: member.drivingLicenseNumber ?? '',
-        createdAt: new Date().toISOString(),
-      }));
-      cars = apiCars.map((car) => ({
-        id: String(car.id),
-        licensePlate: car.licensePlate,
-        brand: car.make,
-        model: car.model,
-        category: this.normalizeCategory(car.carType),
-        seats: car.seats,
-        transmission: car.transmission === 'Manual' ? 'Manual' : 'Automatic',
-        fuelType: car.fuelType,
-        dailyPrice: Number(car.dailyRate),
-        locationId: String(car.locationId ?? ''),
-        mileage: car.mileage,
-        year: car.modelYear,
-        rating: 4.5,
-        available: (car.status ?? 'AVAILABLE') === 'AVAILABLE',
-        features: [],
-      }));
-      locations = apiLocations.map((location) => ({
-        id: String(location.id),
-        name: location.name,
-        address: location.address,
-        city: location.code ?? location.name,
-        phone: '',
-      }));
-    } catch (err) {
-      // Fall back to mock data.
-    }
+    const [apiReservations, apiMembers, apiCars, apiLocations] = await Promise.all([
+      apiClient.get<any[]>('/api/admin/reservations', { auth: true }),
+      apiClient.get<any[]>('/api/admin/members', { auth: true }),
+      apiClient.get<any[]>('/api/cars'),
+      apiClient.get<any[]>('/api/admin/locations', { auth: true }),
+    ]);
+    const reservations = apiReservations.map((reservation) => ({
+      id: String(reservation.id),
+      reservationNumber: reservation.reservationNumber,
+      memberId: String(reservation.memberId),
+      carId: String(reservation.carId),
+      pickUpLocationId: String(reservation.pickupLocationId),
+      dropOffLocationId: String(reservation.dropoffLocationId),
+      pickUpDate: reservation.startDate,
+      dropOffDate: reservation.endDate,
+      totalCost: Number(reservation.totalCost),
+      status: reservation.status === 'COMPLETED' ? 'Completed' : reservation.status === 'CANCELED' ? 'Cancelled' : 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      services: [],
+      equipments: [],
+    }));
+    const users = apiMembers.map((member) => ({
+      id: String(member.id),
+      fullName: member.fullName,
+      email: member.email,
+      role: 'member',
+      phone: member.phone ?? '',
+      address: member.address ?? '',
+      licenseNumber: member.drivingLicenseNumber ?? '',
+      licenseExpiry: member.drivingLicenseExpiry ?? '',
+      createdAt: new Date().toISOString(),
+    }));
+    const cars = apiCars.map((car) => ({
+      id: String(car.id),
+      licensePlate: car.licensePlate,
+      brand: car.make,
+      model: car.model,
+      category: this.normalizeCategory(car.carType),
+      seats: car.seats,
+      transmission: car.transmission === 'Manual' ? 'Manual' : 'Automatic',
+      fuelType: car.fuelType,
+      dailyPrice: Number(car.dailyRate),
+      locationId: String(car.locationId ?? ''),
+      mileage: car.mileage,
+      year: car.modelYear,
+      rating: 4.5,
+      available: (car.status ?? 'AVAILABLE') === 'AVAILABLE',
+      features: [],
+    }));
+    const locations = apiLocations.map((location) => ({
+      id: String(location.id),
+      name: location.name,
+      address: location.address,
+      city: location.code ?? location.name,
+      phone: '',
+    }));
 
     const statusSummary: Record<ReservationStatus, number> = {
       Active: 0,

@@ -1,6 +1,16 @@
-import { addUser, findUserByEmail, generateId, updateUser } from './mockDatabase';
 import { apiClient } from './apiClient';
-import { AuthState, AuthUser, LoginPayload, RegisterPayload } from '../types/auth';
+import { AuthState, AuthUser, LoginPayload, RegisterPayload, UserRole } from '../types/auth';
+
+type ApiProfileResponse = {
+  id: number;
+  email: string;
+  fullName: string;
+  phone?: string | null;
+  address?: string | null;
+  role?: string | null;
+  drivingLicenseNumber?: string | null;
+  drivingLicenseExpiry?: string | null;
+};
 
 const SESSION_KEY = 'crms-auth-session';
 
@@ -39,81 +49,61 @@ function sanitizeUser(user: AuthUser & { password?: string }): AuthUser {
   return safe;
 }
 
+function mapRole(role?: string | null): UserRole {
+  if (!role) {
+    return 'member';
+  }
+  return role.toLowerCase() === 'admin' ? 'admin' : 'member';
+}
+
 export class AuthService {
   async login(payload: LoginPayload): Promise<AuthState> {
-    try {
-      await apiClient.post<void>('/api/auth/login', payload);
-      const existing = findUserByEmail(payload.email);
-      const user: AuthUser = existing
-        ? sanitizeUser(existing)
-        : {
-            id: payload.email,
-            fullName: payload.email.split('@')[0] ?? 'Member',
-            email: payload.email,
-            role: 'member',
-            phone: '',
-            address: '',
-            licenseNumber: '',
-            createdAt: new Date().toISOString(),
-          };
-      const authState: AuthState = {
-        user,
-        token: btoa(`${payload.email}:${payload.password}`),
-      };
-      persistSession(authState);
-      return authState;
-    } catch (err) {
-      const existing = findUserByEmail(payload.email);
-      if (!existing || existing.password !== payload.password) {
-        throw new Error('Invalid email or password.');
-      }
-
-      const authState: AuthState = {
-        user: sanitizeUser(existing),
-        token: btoa(`${existing.id}:${Date.now()}`),
-      };
-      persistSession(authState);
-      return authState;
-    }
-  }
-
-  async register(payload: RegisterPayload): Promise<AuthState> {
-    const existing = findUserByEmail(payload.email);
-    if (existing) {
-      throw new Error('Email is already registered.');
-    }
-
-    try {
-      await apiClient.post<void>('/api/auth/register', {
-        fullName: payload.fullName,
-        email: payload.email.toLowerCase(),
-        phone: payload.phone,
-        address: payload.address,
-        drivingLicenseNumber: payload.licenseNumber,
-        password: payload.password,
-      });
-    } catch (err) {
-      // Keep mock registration as fallback for local usage.
-    }
-
-    const newUser: AuthUser = {
-      id: generateId('u'),
-      fullName: payload.fullName,
-      email: payload.email.toLowerCase(),
-      role: 'member',
-      phone: payload.phone,
-      address: payload.address,
-      licenseNumber: payload.licenseNumber,
-      createdAt: new Date().toISOString(),
-    };
-
-    addUser({ ...newUser, password: payload.password });
+    await apiClient.post<void>('/api/auth/login', payload);
+    const token = btoa(`${payload.email}:${payload.password}`);
+    persistSession({
+      user: {
+        id: payload.email,
+        fullName: payload.email.split('@')[0] ?? 'Member',
+        email: payload.email,
+        role: 'member',
+        phone: '',
+        address: '',
+        licenseNumber: '',
+        licenseExpiry: '',
+        createdAt: new Date().toISOString(),
+      },
+      token,
+    });
+    const profile = await apiClient.get<ApiProfileResponse>('/api/auth/profile', { auth: true });
     const authState: AuthState = {
-      user: newUser,
-      token: btoa(`${payload.email}:${payload.password}`),
+      user: sanitizeUser({
+        id: String(profile.id),
+        fullName: profile.fullName,
+        email: profile.email,
+        role: mapRole(profile.role),
+        phone: profile.phone ?? '',
+        address: profile.address ?? '',
+        licenseNumber: profile.drivingLicenseNumber ?? '',
+        licenseExpiry: profile.drivingLicenseExpiry ?? '',
+        createdAt: new Date().toISOString(),
+      }),
+      token,
     };
     persistSession(authState);
     return authState;
+  }
+
+  async register(payload: RegisterPayload): Promise<AuthState> {
+    await apiClient.post<void>('/api/auth/register', {
+      fullName: payload.fullName,
+      email: payload.email.toLowerCase(),
+      phone: payload.phone,
+      address: payload.address,
+      drivingLicenseNumber: payload.licenseNumber,
+      drivingLicenseExpiry: payload.licenseExpiry,
+      password: payload.password,
+    });
+    return this.login({ email: payload.email, password: payload.password });
   }
 
   async logout(): Promise<void> {
@@ -125,15 +115,19 @@ export class AuthService {
     if (!session?.user) {
       return null;
     }
-
-    const latest = findUserByEmail(session.user.email);
-    if (!latest) {
-      persistSession(null);
-      return null;
-    }
-
+    const profile = await apiClient.get<ApiProfileResponse>('/api/auth/profile', { auth: true });
     const refreshed: AuthState = {
-      user: sanitizeUser(latest),
+      user: sanitizeUser({
+        id: String(profile.id),
+        fullName: profile.fullName,
+        email: profile.email,
+        role: mapRole(profile.role),
+        phone: profile.phone ?? '',
+        address: profile.address ?? '',
+        licenseNumber: profile.drivingLicenseNumber ?? '',
+        licenseExpiry: profile.drivingLicenseExpiry ?? '',
+        createdAt: session.user.createdAt ?? new Date().toISOString(),
+      }),
       token: session.token,
     };
     persistSession(refreshed);
@@ -144,28 +138,33 @@ export class AuthService {
     userId: string,
     data: Partial<Omit<AuthUser, 'id' | 'email' | 'role' | 'createdAt'>>
   ): Promise<AuthUser> {
-    let updatedUser: AuthUser | null = null;
-    updateUser(userId, (current) => {
-      const merged = {
-        ...current,
-        ...data,
-      };
-      updatedUser = sanitizeUser(merged);
-      return merged;
+    await apiClient.patch<void>(
+      '/api/auth/profile',
+      {
+        fullName: data.fullName ?? '',
+        phone: data.phone ?? '',
+        address: data.address ?? '',
+        drivingLicenseNumber: data.licenseNumber ?? '',
+        drivingLicenseExpiry: data.licenseExpiry ?? '',
+      },
+      { auth: true }
+    );
+    const profile = await apiClient.get<ApiProfileResponse>('/api/auth/profile', { auth: true });
+    const updatedUser = sanitizeUser({
+      id: String(profile.id),
+      fullName: profile.fullName,
+      email: profile.email,
+      role: mapRole(profile.role),
+      phone: profile.phone ?? '',
+      address: profile.address ?? '',
+      licenseNumber: profile.drivingLicenseNumber ?? '',
+      licenseExpiry: profile.drivingLicenseExpiry ?? '',
+      createdAt: new Date().toISOString(),
     });
-
-    if (!updatedUser) {
-      throw new Error('User not found.');
-    }
-
     const session = readSession();
     if (session?.user?.id === userId) {
-      persistSession({
-        ...session,
-        user: updatedUser,
-      });
+      persistSession({ ...session, user: updatedUser });
     }
-
     return updatedUser;
   }
 }

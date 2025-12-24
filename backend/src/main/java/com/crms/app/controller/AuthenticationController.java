@@ -1,6 +1,7 @@
 package com.crms.app.controller;
 
 import com.crms.app.dto.LoginRequest;
+import com.crms.app.dto.AuthProfileResponse;
 import com.crms.app.dto.MemberProfileUpdateRequest;
 import com.crms.app.dto.UserRegistrationRequest;
 import com.crms.app.service.AuthenticationService;
@@ -8,6 +9,7 @@ import com.crms.app.service.UserProfileService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,6 +39,11 @@ public class AuthenticationController {
     public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
         authenticationService.authenticate(request);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<AuthProfileResponse> getProfile() {
+        return ResponseEntity.ok(userProfileService.getCurrentProfile());
     }
 
     @PatchMapping("/profile")

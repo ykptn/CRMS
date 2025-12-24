@@ -1,5 +1,4 @@
 import { BranchLocation, CarCategory, CarFilter, CarModel, FuelType, TransmissionType } from '../types/car';
-import { listCars, listReservations, getLocations } from './mockDatabase';
 import { apiClient } from './apiClient';
 
 type ApiCarResponse = {
@@ -31,129 +30,57 @@ type ApiLocationResponse = {
   code?: string;
   name: string;
   address: string;
+  phone?: string;
 };
-
-function isBetween(date: Date, start: Date, end: Date): boolean {
-  return date >= start && date <= end;
-}
-
-function hasOverlap(
-  requestedStart: Date,
-  requestedEnd: Date,
-  reservationStart: Date,
-  reservationEnd: Date
-): boolean {
-  return (
-    isBetween(reservationStart, requestedStart, requestedEnd) ||
-    isBetween(reservationEnd, requestedStart, requestedEnd) ||
-    (reservationStart <= requestedStart && reservationEnd >= requestedEnd)
-  );
-}
 
 export class CarCatalogService {
   async listLocations(): Promise<BranchLocation[]> {
-    try {
-      const locations = await apiClient.get<ApiLocationResponse[]>('/api/admin/locations', { auth: true });
-      return locations.map((location) => ({
-        id: String(location.id),
-        name: location.name,
-        address: location.address,
-        city: location.code ?? location.name,
-        phone: '',
-      }));
-    } catch (err) {
-      return getLocations();
-    }
+    const locations = await apiClient.get<ApiLocationResponse[]>('/api/locations');
+    return locations.map((location) => ({
+      id: String(location.id),
+      code: location.code,
+      name: location.name,
+      address: location.address,
+      city: location.code ?? location.name,
+      phone: location.phone ?? '',
+    }));
   }
 
   async getCars(filter: CarFilter = {}): Promise<CarModel[]> {
-    try {
-      const cars = await apiClient.get<ApiCarResponse[]>('/api/cars', {
-        query: {
-          make: filter.brand,
-          carType: filter.category,
-          locationId: filter.locationId,
-          minDailyRate: filter.minPrice,
-          maxDailyRate: filter.maxPrice,
-          seats: filter.seats,
-          transmission: filter.transmission,
-          fuelType: filter.fuelType,
-          startDate: filter.pickUpDate,
-          endDate: filter.dropOffDate,
-        },
-      });
-      return cars.map((car) => this.mapCar(car));
-    } catch (err) {
-      const cars = listCars();
-      const reservations = listReservations().filter((res) => res.status === 'Active');
-      const pick = filter.pickUpDate ? new Date(filter.pickUpDate) : null;
-      const drop = filter.dropOffDate ? new Date(filter.dropOffDate) : null;
-
-      return cars.filter((car) => {
-        if (!this.matchesFilter(car, filter)) {
-          return false;
-        }
-
-        if (pick && drop) {
-          const conflicting = reservations.some(
-            (reservation) =>
-              reservation.carId === car.id &&
-              hasOverlap(pick, drop, new Date(reservation.pickUpDate), new Date(reservation.dropOffDate))
-          );
-          return !conflicting;
-        }
-
-        return true;
-      });
+    const cars = await apiClient.get<ApiCarResponse[]>('/api/cars', {
+      query: {
+        make: filter.brand,
+        carType: filter.category,
+        locationId: filter.locationId,
+        minDailyRate: filter.minPrice,
+        maxDailyRate: filter.maxPrice,
+        seats: filter.seats,
+        transmission: filter.transmission,
+        fuelType: filter.fuelType,
+        startDate: filter.pickUpDate,
+        endDate: filter.dropOffDate,
+      },
+    });
+    const mapped = cars.map((car) => this.mapCar(car));
+    if (filter.searchText) {
+      const text = filter.searchText.toLowerCase();
+      return mapped.filter(
+        (car) =>
+          car.brand.toLowerCase().includes(text) ||
+          car.model.toLowerCase().includes(text) ||
+          car.features.some((feature) => feature.toLowerCase().includes(text))
+      );
     }
+    return mapped;
   }
 
   async getCarDetails(carId: string): Promise<CarModel | undefined> {
     const numericId = Number(carId);
-    if (!Number.isNaN(numericId)) {
-      try {
-        const car = await apiClient.get<ApiCarResponse>(`/api/cars/${numericId}`);
-        return this.mapCar(car);
-      } catch (err) {
-        // Fall back to mock data.
-      }
+    if (Number.isNaN(numericId)) {
+      throw new Error('Invalid car id.');
     }
-    return listCars().find((car) => car.id === carId);
-  }
-
-  private matchesFilter(car: CarModel, filter: CarFilter): boolean {
-    if (filter.locationId && car.locationId !== filter.locationId) {
-      return false;
-    }
-    if (filter.brand && car.brand.toLowerCase() !== filter.brand.toLowerCase()) {
-      return false;
-    }
-    if (filter.category && car.category !== filter.category) {
-      return false;
-    }
-    if (typeof filter.minPrice === 'number' && car.dailyPrice < filter.minPrice) {
-      return false;
-    }
-    if (typeof filter.maxPrice === 'number' && car.dailyPrice > filter.maxPrice) {
-      return false;
-    }
-    if (filter.seats && car.seats < filter.seats) {
-      return false;
-    }
-    if (filter.transmission && car.transmission !== filter.transmission) {
-      return false;
-    }
-    if (filter.searchText) {
-      const text = filter.searchText.toLowerCase();
-      const matchesText =
-        car.brand.toLowerCase().includes(text) ||
-        car.model.toLowerCase().includes(text) ||
-        car.features.some((feature) => feature.toLowerCase().includes(text));
-      if (!matchesText) {
-        return false;
-      }
-    }
-    return true;
+    const car = await apiClient.get<ApiCarResponse>(`/api/cars/${numericId}`);
+    return this.mapCar(car);
   }
 
   private mapCar(car: ApiCarResponse): CarModel {
@@ -182,6 +109,7 @@ export class CarCatalogService {
       year: car.modelYear,
       rating: 4.5,
       available: (car.status ?? 'AVAILABLE') === 'AVAILABLE',
+      status: (car.status ?? 'AVAILABLE') as CarModel['status'],
       features,
     };
   }

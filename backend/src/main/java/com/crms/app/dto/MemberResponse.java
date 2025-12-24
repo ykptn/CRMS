@@ -8,6 +8,7 @@ public class MemberResponse {
     private String phone;
     private String address;
     private String drivingLicenseNumber;
+    private String drivingLicenseExpiry;
 
     public Long getId() {
         return id;
@@ -55,5 +56,13 @@ public class MemberResponse {
 
     public void setDrivingLicenseNumber(String drivingLicenseNumber) {
         this.drivingLicenseNumber = drivingLicenseNumber;
+    }
+
+    public String getDrivingLicenseExpiry() {
+        return drivingLicenseExpiry;
+    }
+
+    public void setDrivingLicenseExpiry(String drivingLicenseExpiry) {
+        this.drivingLicenseExpiry = drivingLicenseExpiry;
     }
 }

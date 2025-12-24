@@ -2,10 +2,14 @@ import { useCallback, useState } from 'react';
 import { ReservationDraft, ReservationModel } from '../types/reservation';
 import { reservationService } from '../services/reservationService';
 
-const defaultDraft: ReservationDraft = { services: [] };
+const defaultDraft: ReservationDraft = { services: [], equipments: [] };
 
 export function useReservationFlow(memberId?: string) {
-  const [draft, setDraft] = useState<ReservationDraft>({ ...defaultDraft, services: [] });
+  const [draft, setDraft] = useState<ReservationDraft>({
+    ...defaultDraft,
+    services: [],
+    equipments: [],
+  });
   const [reservation, setReservation] = useState<ReservationModel | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +33,20 @@ export function useReservationFlow(memberId?: string) {
     });
   }, []);
 
+  const toggleEquipment = useCallback((equipmentId: string) => {
+    setDraft((prev) => {
+      const hasEquipment = prev.equipments.includes(equipmentId);
+      return {
+        ...prev,
+        equipments: hasEquipment
+          ? prev.equipments.filter((id) => id !== equipmentId)
+          : [...prev.equipments, equipmentId],
+      };
+    });
+  }, []);
+
   const reset = () => {
-    setDraft({ ...defaultDraft, services: [] });
+    setDraft({ ...defaultDraft, services: [], equipments: [] });
     setReservation(null);
     setError(null);
   };
@@ -63,6 +79,7 @@ export function useReservationFlow(memberId?: string) {
     error,
     updateDraft,
     toggleService,
+    toggleEquipment,
     confirmReservation,
     reset,
   };

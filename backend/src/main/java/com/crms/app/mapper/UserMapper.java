@@ -16,6 +16,7 @@ public class UserMapper {
         member.setPhone(request.getPhone());
         member.setAddress(request.getAddress());
         member.setDrivingLicenseNumber(request.getDrivingLicenseNumber());
+        member.setDrivingLicenseExpiry(request.getDrivingLicenseExpiry());
         member.setRole(UserRole.MEMBER);
         return member;
     }

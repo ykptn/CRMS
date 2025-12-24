@@ -20,6 +20,12 @@ public class ReservationMapper {
         summary.setEndDate(reservation.getEndDate());
         summary.setTotalCost(reservation.getTotalCost());
         summary.setStatus(reservation.getStatus());
+        summary.setAdditionalServiceIds(reservation.getAdditionalServices().stream()
+                .map(service -> service.getId())
+                .toList());
+        summary.setEquipmentIds(reservation.getEquipments().stream()
+                .map(equipment -> equipment.getId())
+                .toList());
         return summary;
     }
 

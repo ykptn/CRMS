@@ -1,4 +1,5 @@
 import { AdditionalService } from './service';
+import { Equipment } from './equipment';
 
 export type ReservationStatus = 'Active' | 'Completed' | 'Cancelled';
 
@@ -16,6 +17,7 @@ export interface ReservationModel {
   createdAt: string;
   updatedAt: string;
   services: AdditionalService[];
+  equipments: Equipment[];
   notes?: string;
 }
 
@@ -26,5 +28,6 @@ export interface ReservationDraft {
   pickUpDate?: string;
   dropOffDate?: string;
   services: string[];
+  equipments: string[];
   notes?: string;
 }

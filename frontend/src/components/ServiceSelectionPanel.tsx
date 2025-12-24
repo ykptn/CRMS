@@ -5,6 +5,8 @@ interface ServiceSelectionPanelProps {
   services: AdditionalService[];
   selectedIds: string[];
   onToggle: (serviceId: string) => void;
+  title?: string;
+  emptyMessage?: string;
 }
 
 const gridStyle: CSSProperties = {
@@ -17,14 +19,16 @@ export default function ServiceSelectionPanel({
   services,
   selectedIds,
   onToggle,
+  title = 'Additional services',
+  emptyMessage = 'No additional services configured.',
 }: ServiceSelectionPanelProps) {
   if (services.length === 0) {
-    return <p>No additional services configured.</p>;
+    return <p>{emptyMessage}</p>;
   }
 
   return (
     <section>
-      <h3>Additional services</h3>
+      <h3>{title}</h3>
       <div style={gridStyle}>
         {services.map((service) => {
           const selected = selectedIds.includes(service.id);
@@ -41,7 +45,6 @@ export default function ServiceSelectionPanel({
                 <strong>{service.name}</strong>
                 <span>₺{service.price}</span>
               </header>
-              <p style={{ margin: '0 0 0.5rem 0', color: '#6b7280' }}>{service.description}</p>
               <button type="button" onClick={() => onToggle(service.id)}>
                 {selected ? 'Remove' : 'Add'}
               </button>

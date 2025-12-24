@@ -3,6 +3,7 @@ package com.crms.app.dto;
 import com.crms.app.model.ReservationStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public class ReservationSummary {
 
@@ -16,6 +17,8 @@ public class ReservationSummary {
     private LocalDate endDate;
     private BigDecimal totalCost;
     private ReservationStatus status;
+    private List<Long> additionalServiceIds;
+    private List<Long> equipmentIds;
 
     public Long getId() {
         return id;
@@ -95,5 +98,21 @@ public class ReservationSummary {
 
     public void setStatus(ReservationStatus status) {
         this.status = status;
+    }
+
+    public List<Long> getAdditionalServiceIds() {
+        return additionalServiceIds;
+    }
+
+    public void setAdditionalServiceIds(List<Long> additionalServiceIds) {
+        this.additionalServiceIds = additionalServiceIds;
+    }
+
+    public List<Long> getEquipmentIds() {
+        return equipmentIds;
+    }
+
+    public void setEquipmentIds(List<Long> equipmentIds) {
+        this.equipmentIds = equipmentIds;
     }
 }

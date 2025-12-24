@@ -3,9 +3,11 @@ export type TransmissionType = 'Automatic' | 'Manual';
 export type FuelType = 'Gasoline' | 'Diesel' | 'Electric' | 'Hybrid';
 
 export type CarCategory = 'SUV' | 'Sedan' | 'Hatchback' | 'Truck' | 'Van';
+export type CarStatus = 'AVAILABLE' | 'UNAVAILABLE' | 'RESERVED' | 'RENTED' | 'MAINTENANCE';
 
 export interface BranchLocation {
   id: string;
+  code?: string;
   name: string;
   address: string;
   city: string;
@@ -27,6 +29,7 @@ export interface CarModel {
   year: number;
   rating: number;
   available: boolean;
+  status?: CarStatus;
   imageUrl?: string;
   features: string[];
 }

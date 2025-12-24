@@ -15,6 +15,9 @@ public class MemberMapper {
         response.setPhone(member.getPhone());
         response.setAddress(member.getAddress());
         response.setDrivingLicenseNumber(member.getDrivingLicenseNumber());
+        if (member.getDrivingLicenseExpiry() != null) {
+            response.setDrivingLicenseExpiry(member.getDrivingLicenseExpiry().toString());
+        }
         return response;
     }
 }

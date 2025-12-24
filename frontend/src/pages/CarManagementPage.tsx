@@ -23,6 +23,7 @@ export default function CarManagementPage() {
   const [cars, setCars] = useState<CarModel[]>([]);
   const [branches, setBranches] = useState<BranchLocation[]>([]);
   const [form, setForm] = useState({ ...emptyForm });
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     refreshCars();
@@ -37,11 +38,43 @@ export default function CarManagementPage() {
     event.preventDefault();
     await adminService.saveCar({
       ...(form as CarModel),
-      id: form.id,
+      id: editingId ?? undefined,
       features: form.features ?? [],
       imageUrl: form.imageUrl,
     });
     setForm({ ...emptyForm });
+    setEditingId(null);
+    refreshCars();
+  };
+
+  const startEdit = (car: CarModel) => {
+    setEditingId(car.id);
+    setForm({
+      ...car,
+      brand: car.brand,
+      model: car.model,
+      category: car.category,
+      seats: car.seats,
+      transmission: car.transmission,
+      fuelType: car.fuelType,
+      dailyPrice: car.dailyPrice,
+      locationId: car.locationId,
+      mileage: car.mileage,
+      year: car.year,
+      rating: car.rating,
+      available: car.available,
+      features: car.features ?? [],
+      licensePlate: car.licensePlate,
+    });
+  };
+
+  const toggleAvailability = async (car: CarModel) => {
+    const currentStatus = car.status ?? (car.available ? 'AVAILABLE' : 'UNAVAILABLE');
+    if (currentStatus !== 'AVAILABLE' && currentStatus !== 'UNAVAILABLE') {
+      return;
+    }
+    const nextStatus = currentStatus === 'UNAVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE';
+    await adminService.updateCarStatus(car.id, nextStatus);
     refreshCars();
   };
 
@@ -120,7 +153,7 @@ export default function CarManagementPage() {
           <option value="Hybrid">Hybrid</option>
           <option value="Electric">Electric</option>
         </select>
-        <button type="submit">Save car</button>
+        <button type="submit">{editingId ? 'Update car' : 'Save car'}</button>
       </form>
 
       <table width="100%" cellPadding={12} style={{ marginTop: '1.5rem' }}>
@@ -130,6 +163,7 @@ export default function CarManagementPage() {
             <th align="left">Category</th>
             <th align="left">Daily price</th>
             <th align="left">Branch</th>
+            <th align="left">Status</th>
             <th align="left">Actions</th>
           </tr>
         </thead>
@@ -144,7 +178,19 @@ export default function CarManagementPage() {
                 <td>{car.category}</td>
                 <td>₺{car.dailyPrice}</td>
                 <td>{branch?.city ?? car.locationId}</td>
+                <td>{car.status ?? (car.available ? 'AVAILABLE' : 'UNAVAILABLE')}</td>
                 <td>
+                  <button type="button" onClick={() => startEdit(car)}>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleAvailability(car)}
+                    style={{ marginLeft: '0.5rem' }}
+                    disabled={!['AVAILABLE', 'UNAVAILABLE', undefined].includes(car.status)}
+                  >
+                    {car.status === 'UNAVAILABLE' ? 'Mark available' : 'Mark unavailable'}
+                  </button>
                   <button type="button" onClick={() => adminService.deleteCar(car.id).then(refreshCars)}>
                     Delete
                   </button>

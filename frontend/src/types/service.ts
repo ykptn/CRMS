@@ -3,7 +3,6 @@ export type ServiceCategory = 'Equipment' | 'Protection' | 'Convenience';
 export interface AdditionalService {
   id: string;
   name: string;
-  description: string;
   price: number;
   category: ServiceCategory;
 }
